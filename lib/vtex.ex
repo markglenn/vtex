@@ -23,7 +23,7 @@ defmodule Vtex do
       stream = Vtex.Stream.new()
 
       {tokens, _stream} = Vtex.Stream.feed(stream, <<0x1B, ?[, ?A, ?h, ?i>>)
-      #=> {[{:csi, "", ?A}, {:text, "hi"}], %Vtex.Stream{}}
+      #=> {[{:csi, "", "", ?A}, {:text, "hi"}], %Vtex.Stream{}}
 
       Vtex.Input.interpret(tokens)
       #=> [:arrow_up, {:char, ?h}, {:char, ?i}]

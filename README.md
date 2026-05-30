@@ -60,7 +60,7 @@ stream = Vtex.Stream.new()
 
 # Bytes arrive from the transport (here: arrow-up, then "hi").
 {tokens, stream} = Vtex.Stream.feed(stream, <<0x1B, ?[, ?A, ?h, ?i>>)
-#=> {[{:csi, "", ?A}, {:text, "hi"}], %Vtex.Stream{}}
+#=> {[{:csi, "", "", ?A}, {:text, "hi"}], %Vtex.Stream{}}
 
 Vtex.Input.interpret(tokens)
 #=> [:arrow_up, {:char, ?h}, {:char, ?i}]
@@ -71,8 +71,8 @@ chunks, the first feed emits nothing and the bytes are held until the next feed
 completes them:
 
 ```elixir
-{[], stream}          = Vtex.Stream.feed(stream, <<0x1B, ?[>>)
-{[{:csi, "", ?A}], _} = Vtex.Stream.feed(stream, <<?A>>)
+{[], stream}              = Vtex.Stream.feed(stream, <<0x1B, ?[>>)
+{[{:csi, "", "", ?A}], _} = Vtex.Stream.feed(stream, <<?A>>)
 ```
 
 ### Tokens
@@ -82,7 +82,7 @@ completes them:
 | Token | Meaning |
 | --- | --- |
 | `{:text, binary}` | A run of printable / control bytes |
-| `{:csi, params, final}` | A Control Sequence Introducer — `ESC [ … X` |
+| `{:csi, params, intermediates, final}` | A Control Sequence Introducer — `ESC [ … X` |
 | `{:ss3, byte}` | A single-shift-3 key — `ESC O X` |
 | `{:osc, payload}` | An Operating System Command — `ESC ] … ST` |
 | `{:esc, byte}` | A standalone escape — `ESC <other>` |

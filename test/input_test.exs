@@ -11,7 +11,14 @@ defmodule Vtex.InputTest do
 
     test "multi-byte UTF-8 characters stay whole" do
       assert Input.interpret([{:text, "é"}]) == [{:char, ?é}]
-      assert Input.interpret([{:text, "café"}]) == [{:char, ?c}, {:char, ?a}, {:char, ?f}, {:char, ?é}]
+
+      assert Input.interpret([{:text, "café"}]) == [
+               {:char, ?c},
+               {:char, ?a},
+               {:char, ?f},
+               {:char, ?é}
+             ]
+
       assert Input.interpret([{:text, "🎉"}]) == [{:char, ?🎉}]
     end
 
@@ -41,7 +48,7 @@ defmodule Vtex.InputTest do
 
   describe "arrow keys" do
     test "CSI form (normal cursor mode)" do
-      tokens = [{:csi, "", ?A}, {:csi, "", ?B}, {:csi, "", ?C}, {:csi, "", ?D}]
+      tokens = [{:csi, "", "", ?A}, {:csi, "", "", ?B}, {:csi, "", "", ?C}, {:csi, "", "", ?D}]
       assert Input.interpret(tokens) == [:arrow_up, :arrow_down, :arrow_right, :arrow_left]
     end
 
@@ -53,17 +60,17 @@ defmodule Vtex.InputTest do
 
   describe "navigation keys" do
     test "home and end via CSI letters" do
-      assert Input.interpret([{:csi, "", ?H}, {:csi, "", ?F}]) == [:home, :end]
+      assert Input.interpret([{:csi, "", "", ?H}, {:csi, "", "", ?F}]) == [:home, :end]
     end
 
     test "tilde-terminated editing keys" do
       tokens = [
-        {:csi, "2", ?~},
-        {:csi, "3", ?~},
-        {:csi, "5", ?~},
-        {:csi, "6", ?~},
-        {:csi, "1", ?~},
-        {:csi, "4", ?~}
+        {:csi, "2", "", ?~},
+        {:csi, "3", "", ?~},
+        {:csi, "5", "", ?~},
+        {:csi, "6", "", ?~},
+        {:csi, "1", "", ?~},
+        {:csi, "4", "", ?~}
       ]
 
       assert Input.interpret(tokens) ==
@@ -81,9 +88,9 @@ defmodule Vtex.InputTest do
 
     test "F5-F12 via tilde sequences" do
       tokens = [
-        {:csi, "15", ?~},
-        {:csi, "17", ?~},
-        {:csi, "24", ?~}
+        {:csi, "15", "", ?~},
+        {:csi, "17", "", ?~},
+        {:csi, "24", "", ?~}
       ]
 
       assert Input.interpret(tokens) == [{:function, 5}, {:function, 6}, {:function, 12}]
@@ -92,18 +99,23 @@ defmodule Vtex.InputTest do
 
   describe "SGR" do
     test "an m-terminated CSI is parsed into attributes" do
-      assert Input.interpret([{:csi, "1;31", ?m}]) == [{:sgr, [:bold, {:fg, :red}]}]
+      assert Input.interpret([{:csi, "1;31", "", ?m}]) == [{:sgr, [:bold, {:fg, :red}]}]
     end
   end
 
   describe "unknown / pass-through" do
     test "an unrecognised CSI final byte passes through" do
-      token = {:csi, "", ?Z}
+      token = {:csi, "", "", ?Z}
       assert Input.interpret([token]) == [{:unknown, token}]
     end
 
     test "an unrecognised tilde code passes through" do
-      token = {:csi, "99", ?~}
+      token = {:csi, "99", "", ?~}
+      assert Input.interpret([token]) == [{:unknown, token}]
+    end
+
+    test "a CSI carrying intermediates passes through (e.g. DECSET ESC [ ? 25 h)" do
+      token = {:csi, "25", "?", ?h}
       assert Input.interpret([token]) == [{:unknown, token}]
     end
 

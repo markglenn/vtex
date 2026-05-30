@@ -11,7 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `Vtex.Tokenizer` — pure, stateless tokenizer turning a byte stream into typed
   tokens (`:text`, `:csi`, `:ss3`, `:osc`, `:esc`, `:invalid`) plus a leftover
-  binary for incomplete sequences. DCS/APC/PM/SOS strings are rejected.
+  binary for incomplete sequences. DCS/APC/PM/SOS strings are rejected. The CSI
+  body faithfully reproduces Williams' `csi_entry`/`csi_param`/`csi_intermediate`/
+  `csi_ignore` states and "anywhere" transitions: parameter and intermediate
+  bytes are collected into separate buffers (`{:csi, params, intermediates,
+  final}`), and malformed sequences are silently discarded.
 - `Vtex.Stream` — stateful streaming wrapper that buffers partial sequences
   across chunks and enforces a 256-byte buffer cap against memory-exhaustion
   input.

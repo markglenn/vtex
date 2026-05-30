@@ -22,32 +22,54 @@ defmodule Vtex.TokenizerTest do
 
     test "text is split at an escape sequence" do
       data = <<?a, ?b, @esc, ?[, ?A, ?c>>
-      assert Tokenizer.tokenize(data) == {[{:text, "ab"}, {:csi, "", ?A}, {:text, "c"}], ""}
+      assert Tokenizer.tokenize(data) == {[{:text, "ab"}, {:csi, "", "", ?A}, {:text, "c"}], ""}
     end
   end
 
   describe "CSI" do
     test "bare final byte" do
-      assert Tokenizer.tokenize(<<@esc, ?[, ?A>>) == {[{:csi, "", ?A}], ""}
+      assert Tokenizer.tokenize(<<@esc, ?[, ?A>>) == {[{:csi, "", "", ?A}], ""}
     end
 
     test "with numeric parameters" do
-      assert Tokenizer.tokenize(<<@esc, ?[, "1;31m">>) == {[{:csi, "1;31", ?m}], ""}
+      assert Tokenizer.tokenize(<<@esc, ?[, "1;31m">>) == {[{:csi, "1;31", "", ?m}], ""}
     end
 
-    test "with intermediate bytes" do
-      # ESC [ > c  — secondary device attributes style sequence
-      assert Tokenizer.tokenize(<<@esc, ?[, ?>, ?c>>) == {[{:csi, ">", ?c}], ""}
+    test "private-marker prefix is collected as an intermediate" do
+      # ESC [ > c  — secondary device attributes; '>' is a private marker.
+      assert Tokenizer.tokenize(<<@esc, ?[, ?>, ?c>>) == {[{:csi, "", ">", ?c}], ""}
     end
 
-    test "private parameter prefix is preserved in params" do
-      assert Tokenizer.tokenize(<<@esc, ?[, "?25h">>) == {[{:csi, "?25", ?h}], ""}
+    test "private marker and parameters split into separate buffers" do
+      assert Tokenizer.tokenize(<<@esc, ?[, "?25h">>) == {[{:csi, "25", "?", ?h}], ""}
     end
 
-    test "a high byte (>= 0x80) inside the body aborts as invalid, then resumes" do
-      # The malformed CSI is rejected; the trailing 'm' resumes as ground text.
-      assert Tokenizer.tokenize(<<@esc, ?[, ?1, 0x80, ?m>>) ==
-               {[{:invalid, <<@esc, ?[, ?1, 0x80>>}, {:text, "m"}], ""}
+    test "intermediate bytes are collected separately from parameters" do
+      # ESC [ 1 SP q  — DECSCUSR; SP (0x20) is an intermediate byte.
+      assert Tokenizer.tokenize(<<@esc, ?[, ?1, 0x20, ?q>>) == {[{:csi, "1", " ", ?q}], ""}
+    end
+  end
+
+  describe "CSI csi_ignore (malformed sequences are discarded)" do
+    test "a colon drops the whole sequence" do
+      assert Tokenizer.tokenize(<<@esc, ?[, "38:5:1m">>) == {[], ""}
+    end
+
+    test "a parameter byte after an intermediate drops the sequence" do
+      # ESC [ SP 1 m  — the '1' after the intermediate SP is out of order.
+      assert Tokenizer.tokenize(<<@esc, ?[, 0x20, ?1, ?m>>) == {[], ""}
+    end
+
+    test "a private marker after parameters drops the sequence" do
+      assert Tokenizer.tokenize(<<@esc, ?[, "25?h">>) == {[], ""}
+    end
+
+    test "a high byte (>= 0x80) drops the sequence" do
+      assert Tokenizer.tokenize(<<@esc, ?[, ?1, 0x80, ?m>>) == {[], ""}
+    end
+
+    test "ground text after a discarded sequence still tokenizes" do
+      assert Tokenizer.tokenize(<<@esc, ?[, "3:1m", ?x>>) == {[{:text, "x"}], ""}
     end
   end
 
@@ -58,11 +80,11 @@ defmodule Vtex.TokenizerTest do
     test "a C0 control executes in place and the sequence continues" do
       # ESC [ 1 BEL m  — the BEL is emitted as text, then the CSI completes.
       assert Tokenizer.tokenize(<<@esc, ?[, ?1, @bel, ?m>>) ==
-               {[{:text, <<@bel>>}, {:csi, "1", ?m}], ""}
+               {[{:text, <<@bel>>}, {:csi, "1", "", ?m}], ""}
     end
 
     test "DEL is ignored inside the body" do
-      assert Tokenizer.tokenize(<<@esc, ?[, ?1, 0x7F, ?m>>) == {[{:csi, "1", ?m}], ""}
+      assert Tokenizer.tokenize(<<@esc, ?[, ?1, 0x7F, ?m>>) == {[{:csi, "1", "", ?m}], ""}
     end
 
     test "CAN aborts the sequence and returns to ground" do
@@ -75,12 +97,12 @@ defmodule Vtex.TokenizerTest do
 
     test "ESC abandons the in-flight sequence and starts a fresh one" do
       # The partial 'ESC [ 1' is dropped; parsing restarts at the second ESC.
-      assert Tokenizer.tokenize(<<@esc, ?[, ?1, @esc, ?[, ?A>>) == {[{:csi, "", ?A}], ""}
+      assert Tokenizer.tokenize(<<@esc, ?[, ?1, @esc, ?[, ?A>>) == {[{:csi, "", "", ?A}], ""}
     end
 
     test "executed C0 controls are kept when ESC restarts" do
       assert Tokenizer.tokenize(<<@esc, ?[, @bel, @esc, ?[, ?A>>) ==
-               {[{:text, <<@bel>>}, {:csi, "", ?A}], ""}
+               {[{:text, <<@bel>>}, {:csi, "", "", ?A}], ""}
     end
   end
 

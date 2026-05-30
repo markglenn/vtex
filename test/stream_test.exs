@@ -25,7 +25,7 @@ defmodule Vtex.StreamTest do
       assert stream.buffer == <<@esc, ?[>>
 
       {tokens2, stream} = Stream.feed(stream, <<?A>>)
-      assert tokens2 == [{:csi, "", ?A}]
+      assert tokens2 == [{:csi, "", "", ?A}]
       assert stream.buffer == ""
     end
 

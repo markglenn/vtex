@@ -59,10 +59,10 @@ defmodule Vtex.Input do
       iex> Vtex.Input.interpret([{:text, "é"}])
       [{:char, ?é}]
 
-      iex> Vtex.Input.interpret([{:csi, "", ?A}, {:ss3, ?B}])
+      iex> Vtex.Input.interpret([{:csi, "", "", ?A}, {:ss3, ?B}])
       [:arrow_up, :arrow_down]
 
-      iex> Vtex.Input.interpret([{:csi, "5", ?~}])
+      iex> Vtex.Input.interpret([{:csi, "5", "", ?~}])
       [:page_up]
   """
   @spec interpret([Tokenizer.token()]) :: [event()]
@@ -73,22 +73,22 @@ defmodule Vtex.Input do
   # Text expands to one event per character.
   defp interpret_token({:text, bytes}), do: interpret_text(bytes, [])
 
-  # CSI cursor / editing keys (no parameters).
-  defp interpret_token({:csi, "", final}) when final in [?A, ?B, ?C, ?D, ?H, ?F],
+  # CSI cursor / editing keys (no parameters, no intermediates).
+  defp interpret_token({:csi, "", "", final}) when final in [?A, ?B, ?C, ?D, ?H, ?F],
     do: [csi_final(final)]
 
   # SGR — colour / style.
-  defp interpret_token({:csi, params, ?m}), do: [{:sgr, SGR.parse(params)}]
+  defp interpret_token({:csi, params, "", ?m}), do: [{:sgr, SGR.parse(params)}]
 
   # Tilde-terminated editing and function keys (CSI <n> ~).
-  defp interpret_token({:csi, params, ?~} = token) do
+  defp interpret_token({:csi, params, "", ?~} = token) do
     case tilde_key(params) do
       nil -> [{:unknown, token}]
       event -> [event]
     end
   end
 
-  defp interpret_token({:csi, _params, _final} = token), do: [{:unknown, token}]
+  defp interpret_token({:csi, _params, _inter, _final} = token), do: [{:unknown, token}]
 
   # SS3 — application-mode cursor keys and F1-F4.
   defp interpret_token({:ss3, byte} = token) do
@@ -109,7 +109,10 @@ defmodule Vtex.Input do
   defp interpret_text(<<0x7F, rest::binary>>, acc), do: interpret_text(rest, [:backspace | acc])
   defp interpret_text(<<0x08, rest::binary>>, acc), do: interpret_text(rest, [:backspace | acc])
   defp interpret_text(<<0x1B, rest::binary>>, acc), do: interpret_text(rest, [:escape | acc])
-  defp interpret_text(<<cp::utf8, rest::binary>>, acc), do: interpret_text(rest, [{:char, cp} | acc])
+
+  defp interpret_text(<<cp::utf8, rest::binary>>, acc),
+    do: interpret_text(rest, [{:char, cp} | acc])
+
   # A byte that isn't valid UTF-8 — emit it raw so nothing is silently dropped.
   defp interpret_text(<<b, rest::binary>>, acc), do: interpret_text(rest, [{:char, b} | acc])
 
