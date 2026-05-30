@@ -185,14 +185,17 @@ Transport-layer concerns (connection limits, rate limiting) are out of scope.
 
 Run the test suite with `mix test`. For a hands-on check against a real
 terminal, run the interactive smoke test and press keys to watch how Vtex
-interprets them (arrows, function keys, `Alt`+key, UTF-8, the Escape timeout):
+interprets them (arrows, function keys, modified keys, `Alt`+key, mouse, UTF-8,
+the Escape timeout):
 
 ```
-mix vtex.smoke
+dev/smoke
 ```
 
-It's a development-only task (under `dev/`, never shipped in the package). If
-the Erlang shell competes for stdin, run `ELIXIR_ERL_OPTIONS="-noinput" mix vtex.smoke`.
+It's a development-only task (under `dev/`, never shipped in the package). The
+`dev/smoke` wrapper runs it with `-noinput` so the Erlang shell doesn't compete
+with the smoke reader for stdin; running `mix vtex.smoke` directly is refused
+for that reason.
 
 ## License
 

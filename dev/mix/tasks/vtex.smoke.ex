@@ -9,12 +9,16 @@ defmodule Mix.Tasks.Vtex.Smoke do
   `Vtex.Stream`, so the Escape key resolves via the timeout exactly as it would
   in a server.
 
-      mix vtex.smoke
+      dev/smoke
 
-  Press keys; watch the events. Ctrl-C to quit. If keystrokes seem swallowed or
-  doubled, the Erlang shell is competing for stdin — run with it disabled:
+  Press keys; watch the events. Ctrl-C to quit.
 
-      ELIXIR_ERL_OPTIONS="-noinput" mix vtex.smoke
+  The `dev/smoke` wrapper runs the task with `-noinput`, which disables the
+  Erlang shell's own stdin reader. That matters: without it the BEAM and this
+  task's reader both read the terminal and split keystrokes between them,
+  silently dropping some. Running `mix vtex.smoke` directly (without `-noinput`)
+  is refused for that reason — use the wrapper, or set the flag yourself
+  (`ELIXIR_ERL_OPTIONS="-noinput" mix vtex.smoke`).
 
   All terminal I/O goes straight to the controlling tty device (discovered via
   `ps`): input is streamed by `cat -u <device>` as a port, output is written to
@@ -36,6 +40,7 @@ defmodule Mix.Tasks.Vtex.Smoke do
 
   @impl Mix.Task
   def run(_args) do
+    ensure_noinput!()
     dev = tty_device!()
     saved = capture_tty!(dev)
     {:ok, out} = :file.open(String.to_charlist(dev), [:write, :binary, :raw])
@@ -50,6 +55,27 @@ defmodule Mix.Tasks.Vtex.Smoke do
       :file.write(out, Vtex.Mouse.disable())
       System.cmd("sh", ["-c", "stty #{saved} < #{dev}"])
       :file.close(out)
+    end
+  end
+
+  # Without -noinput the BEAM's own stdin reader competes with our reader for
+  # the terminal and drops keystrokes. The wrapper sets the flag for you.
+  defp ensure_noinput! do
+    case :init.get_argument(:noinput) do
+      {:ok, _} ->
+        :ok
+
+      :error ->
+        Mix.raise("""
+        vtex.smoke must run with the Erlang shell's stdin reader disabled,
+        otherwise it competes with the smoke reader and drops keystrokes.
+
+        Run the wrapper instead:
+
+            dev/smoke
+
+        (equivalently: ELIXIR_ERL_OPTIONS="-noinput" mix vtex.smoke)
+        """)
     end
   end
 

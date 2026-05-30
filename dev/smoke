@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run the Vtex interactive smoke test with the Erlang shell's stdin reader
+# disabled (-noinput). Without this, the BEAM and the smoke test's own reader
+# both read the terminal and split keystrokes between them, dropping some.
+#
+# Usage: dev/smoke
+exec env ELIXIR_ERL_OPTIONS="-noinput" mix vtex.smoke "$@"
