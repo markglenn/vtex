@@ -21,6 +21,8 @@ defmodule Vtex.Input do
       {:key, base_event, [:shift | :alt | :ctrl | :meta]}
       {:mouse, Vtex.Mouse.event()}
       :paste_start | :paste_end
+      :focus_in | :focus_out
+      {:cursor_position, row :: pos_integer(), col :: pos_integer()}
       {:char, char()}
       {:sgr, [Vtex.SGR.attribute()]}
       {:unknown, Vtex.Tokenizer.token()}
@@ -68,6 +70,19 @@ defmodule Vtex.Input do
   the pasted content, not a "submit"). Apply your own size limit while
   accumulating: the parser is stateless and does not buffer the paste for you,
   so a never-terminated paste cannot exhaust memory.
+
+  ## Reports and focus
+
+  A couple of sequences arrive as replies to a query you send, or when a mode is
+  enabled:
+
+    * A **Cursor Position Report** (`CSI <row> ; <col> R`, the reply to writing
+      `CSI 6 n`) becomes `{:cursor_position, row, col}` (1-based). This is the
+      in-band way to read the cursor — and, by parking it at `CSI 999 ; 999 H`
+      first, to probe the terminal size when the transport can't tell you
+      (prefer SSH window-change / Telnet NAWS when it can).
+    * **Focus reporting** (enabled with `Vtex.Focus.enable/0`) delivers
+      `:focus_in` and `:focus_out` as the window gains and loses focus.
   """
 
   import Bitwise, only: [&&&: 2]
@@ -97,6 +112,9 @@ defmodule Vtex.Input do
           | {:mouse, Mouse.event()}
           | :paste_start
           | :paste_end
+          | :focus_in
+          | :focus_out
+          | {:cursor_position, pos_integer(), pos_integer()}
           | {:char, char()}
           | {:sgr, [SGR.attribute()]}
           | {:unknown, Tokenizer.token()}
@@ -129,6 +147,9 @@ defmodule Vtex.Input do
 
       iex> Vtex.Input.interpret([{:csi, "200", "", ?~}, {:text, "hi"}, {:csi, "201", "", ?~}])
       [:paste_start, {:char, ?h}, {:char, ?i}, :paste_end]
+
+      iex> Vtex.Input.interpret([{:csi, "24;80", "", ?R}, {:csi, "", "", ?O}])
+      [{:cursor_position, 24, 80}, :focus_out]
   """
   @spec interpret([Tokenizer.token()]) :: [event()]
   def interpret(tokens) when is_list(tokens) do
@@ -146,6 +167,18 @@ defmodule Vtex.Input do
   defp interpret_token({:csi, "1;" <> mod, "", final} = token)
        when final in [?A, ?B, ?C, ?D, ?H, ?F],
        do: modified(csi_final(final), mod, token)
+
+  # Focus reporting — CSI I / CSI O (mode 1004; see Vtex.Focus).
+  defp interpret_token({:csi, "", "", ?I}), do: [:focus_in]
+  defp interpret_token({:csi, "", "", ?O}), do: [:focus_out]
+
+  # Cursor Position Report — CSI <row> ; <col> R (reply to CSI 6 n).
+  defp interpret_token({:csi, params, "", ?R} = token) do
+    case two_ints(params) do
+      {row, col} -> [{:cursor_position, row, col}]
+      nil -> [{:unknown, token}]
+    end
+  end
 
   # SGR mouse events — CSI < b ; x ; y M/m (the '<' marker lands in intermediates).
   defp interpret_token({:csi, params, "<", final} = token) when final in [?M, ?m] do
@@ -197,6 +230,14 @@ defmodule Vtex.Input do
   end
 
   defp interpret_token(token), do: [{:unknown, token}]
+
+  # Parse a "<a>;<b>" parameter pair into {a, b}, or nil if malformed.
+  defp two_ints(params) do
+    case params |> String.split(";") |> Enum.map(&Integer.parse/1) do
+      [{a, ""}, {b, ""}] -> {a, b}
+      _ -> nil
+    end
+  end
 
   # --- modifier decoding ---
 

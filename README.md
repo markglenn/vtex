@@ -160,6 +160,14 @@ with the content as ordinary events in between; accumulate those (treating them
 as literal text) until `:paste_end`, applying your own size limit. The parser
 stays stateless and never buffers the paste itself.
 
+### Reports and focus
+
+A **Cursor Position Report** (`CSI r ; c R`, the reply to writing `CSI 6n`)
+arrives as `{:cursor_position, row, col}` — the in-band way to read the cursor,
+or to probe terminal size when SSH/Telnet can't tell you. **Focus reporting**
+(`Vtex.Focus.enable()`) delivers `:focus_in` / `:focus_out` as the window gains
+and loses focus.
+
 ### Mouse
 
 Mouse reporting is opt-in. Write `Vtex.Mouse.enable()` to the terminal to turn

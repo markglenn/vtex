@@ -166,6 +166,21 @@ defmodule Vtex.InputTest do
     end
   end
 
+  describe "reports and focus" do
+    test "a Cursor Position Report becomes {:cursor_position, row, col}" do
+      assert Input.interpret([{:csi, "24;80", "", ?R}]) == [{:cursor_position, 24, 80}]
+    end
+
+    test "a malformed cursor report passes through" do
+      token = {:csi, "24", "", ?R}
+      assert Input.interpret([token]) == [{:unknown, token}]
+    end
+
+    test "focus in/out" do
+      assert Input.interpret([{:csi, "", "", ?I}, {:csi, "", "", ?O}]) == [:focus_in, :focus_out]
+    end
+  end
+
   describe "Alt / Meta keys" do
     test "ESC + a printable byte becomes an :alt event" do
       assert Input.interpret([{:esc, ?a}]) == [{:alt, ?a}]

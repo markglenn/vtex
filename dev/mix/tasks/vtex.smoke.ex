@@ -47,12 +47,14 @@ defmodule Mix.Tasks.Vtex.Smoke do
 
     try do
       set_raw!(dev)
-      :file.write(out, [Vtex.Mouse.enable(), Vtex.Paste.enable()])
+      :file.write(out, [Vtex.Mouse.enable(), Vtex.Paste.enable(), Vtex.Focus.enable()])
       port = open_reader!(dev)
       intro(out)
+      # Query the cursor position so a {:cursor_position, …} event shows up.
+      :file.write(out, "\e[6n")
       loop(out, port, Vtex.Stream.new())
     after
-      :file.write(out, [Vtex.Mouse.disable(), Vtex.Paste.disable()])
+      :file.write(out, [Vtex.Mouse.disable(), Vtex.Paste.disable(), Vtex.Focus.disable()])
       System.cmd("sh", ["-c", "stty #{saved} < #{dev}"])
       :file.close(out)
     end
@@ -215,6 +217,8 @@ defmodule Mix.Tasks.Vtex.Smoke do
       * Escape     -> note the ~#{@esc_timeout_ms}ms pause before :escape (the timeout at work)
       * the mouse  -> click, drag, scroll (SGR mouse reporting is on)
       * paste a block of text -> :paste_start, the content, then :paste_end
+      * click away and back -> :focus_out / :focus_in (focus reporting is on)
+      * a {:cursor_position, row, col} appears at startup (queried with CSI 6n)
     """)
   end
 end

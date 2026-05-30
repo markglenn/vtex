@@ -32,3 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   action, button, position and modifiers.
 - `Vtex.Paste` — bracketed paste: `enable/0`/`disable/0` control sequences; the
   paste markers surface from `Vtex.Input` as `:paste_start` / `:paste_end`.
+- `Vtex.Focus` — focus reporting: `enable/0`/`disable/0` control sequences; the
+  terminal's focus changes surface from `Vtex.Input` as `:focus_in` /
+  `:focus_out`.
+- `Vtex.Input` also decodes Cursor Position Reports (`CSI r ; c R`) into
+  `{:cursor_position, row, col}`.
