@@ -28,20 +28,21 @@ defmodule Vtex do
 
   ## Output
 
-  Output functions return iodata to write to the terminal:
+  `Vtex.ANSI` is a drop-in superset of `IO.ANSI` (verified byte-for-byte) with
+  24-bit truecolor on top. Output functions return iodata to write:
 
       transport_write([
         Vtex.Screen.clear(),
-        Vtex.Cursor.to(1, 1),
-        Vtex.SGR.encode([:bold, {:fg, :red}]),
-        "Hello",
-        Vtex.SGR.encode([:reset])
+        Vtex.ANSI.cursor(1, 1),
+        Vtex.ANSI.format([:bright, ANSI.true_color(255, 128, 0), "Hello"])
       ])
 
   ## Modules
 
   Input: `Vtex.Stream`, `Vtex.Tokenizer`, `Vtex.Input`.
-  Output: `Vtex.Cursor`, `Vtex.Screen`, `Vtex.SGR` (`encode/1`).
+  Output: `Vtex.ANSI` (IO.ANSI-compatible colour/style/cursor + truecolor),
+  `Vtex.Cursor`, `Vtex.Screen`, `Vtex.OSC` (title, hyperlinks), `Vtex.SGR`
+  (`encode/1`).
   Both: `Vtex.SGR` (parse + encode), and the mode toggles `Vtex.Mouse`,
   `Vtex.Paste`, `Vtex.Focus` (whose events also feed `Vtex.Input`).
   """

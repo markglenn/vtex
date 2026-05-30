@@ -42,3 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Vtex.Cursor` (movement, position, save/restore, visibility) and `Vtex.Screen`
   (clearing, the alternate buffer, scroll regions). All return iodata to write;
   the library still performs no IO of its own.
+- `Vtex.ANSI` — a drop-in superset of `IO.ANSI`, mirroring every function
+  byte-for-byte (asserted against `IO.ANSI` in the tests) and adding 24-bit
+  truecolor (`true_color/3`, `true_color_background/3`).
+- `Vtex.OSC` — window title (`title/1`) and clickable hyperlinks (`hyperlink/2`).

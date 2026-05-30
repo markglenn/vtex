@@ -17,8 +17,9 @@ truecolor, the alternate screen buffer, and mouse/paste/focus reporting.
   with a CSI parser faithful to [Paul Williams' DEC ANSI state machine](https://vt100.net/emu/dec_ansi_parser)
 - Maps tokens to semantic events — keys, function keys, `Alt`/`Meta` keys,
   modified keys, SGR mouse, SGR colour — decoding UTF-8 input to whole characters
-- Builds output sequences too — colour/style (incl. truecolor), cursor control,
-  screen clearing, the alternate buffer — covering the gaps `IO.ANSI` leaves
+- Builds output sequences too — `Vtex.ANSI` is a drop-in superset of `IO.ANSI`
+  (verified byte-for-byte) adding truecolor, plus cursor/screen control, the
+  alternate buffer, window title and hyperlinks
 - Handles streaming input correctly — partial sequences are buffered across chunks
 - Resolves the standalone-`Escape`-vs-escape-sequence ambiguity with a
   caller-driven read timeout (no timers baked into the library)
@@ -190,24 +191,29 @@ sequence; see [The Escape key](#the-escape-key) above for how you resolve it.
 ## Output
 
 Output functions return iodata for you to write to the terminal — the library
-never does IO itself. Compose them into a single write:
+never does IO itself.
+
+`Vtex.ANSI` is a **drop-in superset of `IO.ANSI`**: every `IO.ANSI` function is
+mirrored byte-for-byte (the test suite asserts parity), so you can swap the
+module name and keep your calls — plus it adds 24-bit truecolor, which
+`IO.ANSI` can't express.
 
 ```elixir
 transport_write([
   Vtex.Screen.enter_alternate(),
-  Vtex.Screen.clear(),
-  Vtex.Cursor.to(1, 1),
-  Vtex.SGR.encode([:bold, {:fg, {:rgb, 255, 128, 0}}]),
-  "Hello, world",
-  Vtex.SGR.encode([:reset])
+  Vtex.ANSI.clear(),
+  Vtex.ANSI.cursor(1, 1),
+  Vtex.ANSI.format([:bright, Vtex.ANSI.true_color(255, 128, 0), "Hello, world"])
 ])
 ```
 
 | Module | What it builds |
 | --- | --- |
-| `Vtex.SGR` | `encode/1` — colour and text style, including 256-colour and truecolor |
-| `Vtex.Cursor` | absolute/relative movement, save/restore, hide/show |
-| `Vtex.Screen` | clear screen/line, alternate buffer, scroll region |
+| `Vtex.ANSI` | drop-in `IO.ANSI` superset — colours, styles, cursor, `format/1`, **truecolor** |
+| `Vtex.Cursor` | richer cursor control — save/restore, hide/show (beyond `IO.ANSI`) |
+| `Vtex.Screen` | clear variants, alternate buffer, scroll region |
+| `Vtex.OSC` | window title, clickable hyperlinks |
+| `Vtex.SGR` | `parse/1` and `encode/1` — structured colour/style attributes |
 | `Vtex.Mouse` / `Vtex.Paste` / `Vtex.Focus` | `enable/0` / `disable/0` mode toggles |
 
 ## Security
