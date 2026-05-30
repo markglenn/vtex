@@ -19,6 +19,7 @@ defmodule Vtex.Input do
       {:function, 1..12}
       {:alt, byte()}
       {:key, base_event, [:shift | :alt | :ctrl | :meta]}
+      {:mouse, Vtex.Mouse.event()}
       {:char, char()}
       {:sgr, [Vtex.SGR.attribute()]}
       {:unknown, Vtex.Tokenizer.token()}
@@ -59,7 +60,7 @@ defmodule Vtex.Input do
 
   import Bitwise, only: [&&&: 2]
 
-  alias Vtex.{SGR, Tokenizer}
+  alias Vtex.{Mouse, SGR, Tokenizer}
 
   @type modifier :: :shift | :alt | :ctrl | :meta
 
@@ -81,6 +82,7 @@ defmodule Vtex.Input do
           | {:function, 1..12}
           | {:alt, byte()}
           | {:key, event(), [modifier()]}
+          | {:mouse, Mouse.event()}
           | {:char, char()}
           | {:sgr, [SGR.attribute()]}
           | {:unknown, Tokenizer.token()}
@@ -107,6 +109,9 @@ defmodule Vtex.Input do
 
       iex> Vtex.Input.interpret([{:csi, "1;2", "", ?A}, {:csi, "15;5", "", ?~}])
       [{:key, :arrow_up, [:shift]}, {:key, {:function, 5}, [:ctrl]}]
+
+      iex> Vtex.Input.interpret([{:csi, "0;10;5", "<", ?M}])
+      [{:mouse, %{action: :press, button: :left, x: 10, y: 5, mods: []}}]
   """
   @spec interpret([Tokenizer.token()]) :: [event()]
   def interpret(tokens) when is_list(tokens) do
@@ -124,6 +129,14 @@ defmodule Vtex.Input do
   defp interpret_token({:csi, "1;" <> mod, "", final} = token)
        when final in [?A, ?B, ?C, ?D, ?H, ?F],
        do: modified(csi_final(final), mod, token)
+
+  # SGR mouse events — CSI < b ; x ; y M/m (the '<' marker lands in intermediates).
+  defp interpret_token({:csi, params, "<", final} = token) when final in [?M, ?m] do
+    case Mouse.decode(params, final) do
+      nil -> [{:unknown, token}]
+      event -> [{:mouse, event}]
+    end
+  end
 
   # SGR — colour / style.
   defp interpret_token({:csi, params, "", ?m}), do: [{:sgr, SGR.parse(params)}]

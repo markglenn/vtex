@@ -15,8 +15,8 @@ for that.
 
 - Parses a raw byte stream into typed tokens (`:text`, `:csi`, `:ss3`, `:osc`, …),
   with a CSI parser faithful to [Paul Williams' DEC ANSI state machine](https://vt100.net/emu/dec_ansi_parser)
-- Maps tokens to semantic events — keys, function keys, `Alt`/`Meta` keys, SGR —
-  decoding UTF-8 input to whole characters
+- Maps tokens to semantic events — keys, function keys, `Alt`/`Meta` keys,
+  modified keys, SGR mouse, SGR colour — decoding UTF-8 input to whole characters
 - Handles streaming input correctly — partial sequences are buffered across chunks
 - Resolves the standalone-`Escape`-vs-escape-sequence ambiguity with a
   caller-driven read timeout (no timers baked into the library)
@@ -151,6 +151,20 @@ Holding `Shift`/`Ctrl`/`Alt` produces `{:key, base, mods}` — e.g. `Shift+Up` i
 `{:key, :arrow_up, [:shift]}` and `Ctrl+F5` is `{:key, {:function, 5}, [:ctrl]}`
 — where `base` is the unmodified event and `mods` is drawn from `:shift`,
 `:alt`, `:ctrl`, `:meta`.
+
+### Mouse
+
+Mouse reporting is opt-in. Write `Vtex.Mouse.enable()` to the terminal to turn
+it on (and `Vtex.Mouse.disable()` on teardown); events then arrive as `{:mouse,
+%{action:, button:, x:, y:, mods:}}` via `Vtex.Input`. Only the modern SGR
+encoding is supported. Pass `motion: :all` for bare pointer-motion events,
+`:none` for press/release only, or the default `:drag` — see `Vtex.Mouse`.
+
+```elixir
+transport_write(Vtex.Mouse.enable())
+# a left click at column 10, row 5 arrives as:
+#=> {:mouse, %{action: :press, button: :left, x: 10, y: 5, mods: []}}
+```
 
 A standalone `Escape` keypress is inherently ambiguous against an `ESC`-prefixed
 sequence; see [The Escape key](#the-escape-key) above for how you resolve it.

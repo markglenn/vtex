@@ -42,10 +42,12 @@ defmodule Mix.Tasks.Vtex.Smoke do
 
     try do
       set_raw!(dev)
+      :file.write(out, Vtex.Mouse.enable())
       port = open_reader!(dev)
       intro(out)
       loop(out, port, Vtex.Stream.new())
     after
+      :file.write(out, Vtex.Mouse.disable())
       System.cmd("sh", ["-c", "stty #{saved} < #{dev}"])
       :file.close(out)
     end
@@ -164,6 +166,10 @@ defmodule Mix.Tasks.Vtex.Smoke do
   end
 
   defp fmt({:char, cp}), do: "{:char, #{cp}} #{inspect(<<cp::utf8>>)}"
+
+  defp fmt({:mouse, m}),
+    do: "mouse #{m.action} #{inspect(m.button)} @ (#{m.x},#{m.y}) #{inspect(m.mods)}"
+
   defp fmt(other), do: inspect(other)
 
   defp pute(out, str) do
@@ -181,6 +187,7 @@ defmodule Mix.Tasks.Vtex.Smoke do
       * function keys F1-F12
       * Alt+<key>  -> {:alt, byte}
       * Escape     -> note the ~#{@esc_timeout_ms}ms pause before :escape (the timeout at work)
+      * the mouse  -> click, drag, scroll (SGR mouse reporting is on)
       * paste a block of text
     """)
   end

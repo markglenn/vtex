@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2026-05-30
+## [Unreleased]
 
 ### Added
 
@@ -27,3 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `{:key, base, mods}`; characters are emitted as UTF-8 codepoints.
 - `Vtex.SGR` — parses SGR parameter strings into structured colour/style
   attributes, including 256-colour and truecolor selectors.
+- `Vtex.Mouse` — SGR mouse reporting: `enable/0`/`disable/0` control sequences
+  and a decoder; events surface from `Vtex.Input` as `{:mouse, map}` with
+  action, button, position and modifiers.

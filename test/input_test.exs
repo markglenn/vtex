@@ -135,6 +135,23 @@ defmodule Vtex.InputTest do
     end
   end
 
+  describe "mouse events" do
+    test "an SGR mouse press is decoded (the '<' marker is in intermediates)" do
+      assert Input.interpret([{:csi, "0;10;5", "<", ?M}]) ==
+               [{:mouse, %{action: :press, button: :left, x: 10, y: 5, mods: []}}]
+    end
+
+    test "release uses the lowercase final" do
+      assert Input.interpret([{:csi, "2;3;4", "<", ?m}]) ==
+               [{:mouse, %{action: :release, button: :right, x: 3, y: 4, mods: []}}]
+    end
+
+    test "a malformed mouse sequence passes through" do
+      token = {:csi, "0;1", "<", ?M}
+      assert Input.interpret([token]) == [{:unknown, token}]
+    end
+  end
+
   describe "Alt / Meta keys" do
     test "ESC + a printable byte becomes an :alt event" do
       assert Input.interpret([{:esc, ?a}]) == [{:alt, ?a}]
