@@ -152,6 +152,20 @@ defmodule Vtex.InputTest do
     end
   end
 
+  describe "bracketed paste" do
+    test "the markers become :paste_start / :paste_end, content flows between" do
+      tokens = [{:csi, "200", "", ?~}, {:text, "ab"}, {:csi, "201", "", ?~}]
+      assert Input.interpret(tokens) == [:paste_start, {:char, ?a}, {:char, ?b}, :paste_end]
+    end
+
+    test "an embedded newline in pasted content is a literal :enter, not unknown" do
+      tokens = [{:csi, "200", "", ?~}, {:text, "a\rb"}, {:csi, "201", "", ?~}]
+
+      assert Input.interpret(tokens) ==
+               [:paste_start, {:char, ?a}, :enter, {:char, ?b}, :paste_end]
+    end
+  end
+
   describe "Alt / Meta keys" do
     test "ESC + a printable byte becomes an :alt event" do
       assert Input.interpret([{:esc, ?a}]) == [{:alt, ?a}]

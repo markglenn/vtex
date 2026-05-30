@@ -30,3 +30,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Vtex.Mouse` — SGR mouse reporting: `enable/0`/`disable/0` control sequences
   and a decoder; events surface from `Vtex.Input` as `{:mouse, map}` with
   action, button, position and modifiers.
+- `Vtex.Paste` — bracketed paste: `enable/0`/`disable/0` control sequences; the
+  paste markers surface from `Vtex.Input` as `:paste_start` / `:paste_end`.

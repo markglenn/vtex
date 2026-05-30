@@ -20,6 +20,7 @@ defmodule Vtex.Input do
       {:alt, byte()}
       {:key, base_event, [:shift | :alt | :ctrl | :meta]}
       {:mouse, Vtex.Mouse.event()}
+      :paste_start | :paste_end
       {:char, char()}
       {:sgr, [Vtex.SGR.attribute()]}
       {:unknown, Vtex.Tokenizer.token()}
@@ -56,6 +57,17 @@ defmodule Vtex.Input do
   Disambiguating a real `Escape` press requires an inactivity timeout in the
   caller (flush as `:escape` if no byte follows within a few milliseconds);
   Vtex deliberately leaves that policy to you.
+
+  ## Bracketed paste
+
+  When bracketed paste is enabled (`Vtex.Mouse`-style, via `Vtex.Paste.enable/0`)
+  the terminal wraps pasted text between `ESC [ 200 ~` and `ESC [ 201 ~`, which
+  surface as `:paste_start` and `:paste_end`. The pasted bytes in between arrive
+  as ordinary events — accumulate them until `:paste_end` to reconstruct the
+  text, treating it as literal data (e.g. an embedded `:enter` is a newline in
+  the pasted content, not a "submit"). Apply your own size limit while
+  accumulating: the parser is stateless and does not buffer the paste for you,
+  so a never-terminated paste cannot exhaust memory.
   """
 
   import Bitwise, only: [&&&: 2]
@@ -83,6 +95,8 @@ defmodule Vtex.Input do
           | {:alt, byte()}
           | {:key, event(), [modifier()]}
           | {:mouse, Mouse.event()}
+          | :paste_start
+          | :paste_end
           | {:char, char()}
           | {:sgr, [SGR.attribute()]}
           | {:unknown, Tokenizer.token()}
@@ -112,6 +126,9 @@ defmodule Vtex.Input do
 
       iex> Vtex.Input.interpret([{:csi, "0;10;5", "<", ?M}])
       [{:mouse, %{action: :press, button: :left, x: 10, y: 5, mods: []}}]
+
+      iex> Vtex.Input.interpret([{:csi, "200", "", ?~}, {:text, "hi"}, {:csi, "201", "", ?~}])
+      [:paste_start, {:char, ?h}, {:char, ?i}, :paste_end]
   """
   @spec interpret([Tokenizer.token()]) :: [event()]
   def interpret(tokens) when is_list(tokens) do
@@ -140,6 +157,10 @@ defmodule Vtex.Input do
 
   # SGR — colour / style.
   defp interpret_token({:csi, params, "", ?m}), do: [{:sgr, SGR.parse(params)}]
+
+  # Bracketed paste markers — CSI 200 ~ / CSI 201 ~ (see Vtex.Paste).
+  defp interpret_token({:csi, "200", "", ?~}), do: [:paste_start]
+  defp interpret_token({:csi, "201", "", ?~}), do: [:paste_end]
 
   # Tilde-terminated editing and function keys — CSI <n> ~ or CSI <n> ; <mod> ~.
   defp interpret_token({:csi, params, "", ?~} = token) do

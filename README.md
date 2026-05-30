@@ -152,6 +152,14 @@ Holding `Shift`/`Ctrl`/`Alt` produces `{:key, base, mods}` — e.g. `Shift+Up` i
 — where `base` is the unmodified event and `mods` is drawn from `:shift`,
 `:alt`, `:ctrl`, `:meta`.
 
+### Bracketed paste
+
+Enable it with `Vtex.Paste.enable()` (disable with `Vtex.Paste.disable()`).
+Pasted text then arrives bracketed by `:paste_start` and `:paste_end` events,
+with the content as ordinary events in between; accumulate those (treating them
+as literal text) until `:paste_end`, applying your own size limit. The parser
+stays stateless and never buffers the paste itself.
+
 ### Mouse
 
 Mouse reporting is opt-in. Write `Vtex.Mouse.enable()` to the terminal to turn
