@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Vtex.Input` — maps tokens to semantic events (keys, function keys, SGR,
   characters), recognising both CSI and SS3 forms of cursor/editing keys.
   `Alt`/`Meta`-modified keys (`ESC`-prefixed) surface as `{:alt, byte}`;
-  characters are emitted as UTF-8 codepoints.
+  `Shift`/`Ctrl`/`Alt`-modified arrows, navigation and function keys surface as
+  `{:key, base, mods}`; characters are emitted as UTF-8 codepoints.
 - `Vtex.SGR` — parses SGR parameter strings into structured colour/style
   attributes, including 256-colour and truecolor selectors.

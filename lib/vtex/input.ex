@@ -18,6 +18,7 @@ defmodule Vtex.Input do
       :insert | :delete | :home | :end | :page_up | :page_down
       {:function, 1..12}
       {:alt, byte()}
+      {:key, base_event, [:shift | :alt | :ctrl | :meta]}
       {:char, char()}
       {:sgr, [Vtex.SGR.attribute()]}
       {:unknown, Vtex.Tokenizer.token()}
@@ -25,6 +26,20 @@ defmodule Vtex.Input do
   Arrow and editing keys are sent differently depending on the terminal's cursor
   key mode: as CSI (`ESC [ A`) in normal mode, or as SS3 (`ESC O A`) in
   application mode. Both forms are handled.
+
+  ## Modified keys
+
+  Holding `Shift`, `Ctrl` or `Alt` while pressing an arrow, navigation or
+  function key produces a CSI sequence with a modifier parameter — `Shift+Up` is
+  `CSI 1 ; 2 A`, `Ctrl+Home` is `CSI 1 ; 5 H`, `Shift+F5` is `CSI 15 ; 2 ~`. The
+  modifier is encoded as `1 + bitmask`, where the bitmask is `1=Shift`, `2=Alt`,
+  `4=Ctrl`, `8=Meta`.
+
+  These surface as `{:key, base, mods}`, where `base` is the same event the
+  unmodified key would produce (`:arrow_up`, `:home`, `{:function, 5}`) and
+  `mods` is a list drawn from `:shift`, `:alt`, `:ctrl`, `:meta` in that order.
+  Unmodified keys keep their plain form, so `:arrow_up` and `{:key, :arrow_up,
+  [:shift]}` are distinct.
 
   ## Alt / Meta keys
 
@@ -42,7 +57,11 @@ defmodule Vtex.Input do
   Vtex deliberately leaves that policy to you.
   """
 
+  import Bitwise, only: [&&&: 2]
+
   alias Vtex.{SGR, Tokenizer}
+
+  @type modifier :: :shift | :alt | :ctrl | :meta
 
   @type event ::
           :enter
@@ -61,6 +80,7 @@ defmodule Vtex.Input do
           | :page_down
           | {:function, 1..12}
           | {:alt, byte()}
+          | {:key, event(), [modifier()]}
           | {:char, char()}
           | {:sgr, [SGR.attribute()]}
           | {:unknown, Tokenizer.token()}
@@ -84,6 +104,9 @@ defmodule Vtex.Input do
 
       iex> Vtex.Input.interpret([{:esc, ?x}])
       [{:alt, ?x}]
+
+      iex> Vtex.Input.interpret([{:csi, "1;2", "", ?A}, {:csi, "15;5", "", ?~}])
+      [{:key, :arrow_up, [:shift]}, {:key, {:function, 5}, [:ctrl]}]
   """
   @spec interpret([Tokenizer.token()]) :: [event()]
   def interpret(tokens) when is_list(tokens) do
@@ -97,14 +120,31 @@ defmodule Vtex.Input do
   defp interpret_token({:csi, "", "", final}) when final in [?A, ?B, ?C, ?D, ?H, ?F],
     do: [csi_final(final)]
 
+  # Modified cursor / navigation keys — CSI 1 ; <mod> <final>.
+  defp interpret_token({:csi, "1;" <> mod, "", final} = token)
+       when final in [?A, ?B, ?C, ?D, ?H, ?F],
+       do: modified(csi_final(final), mod, token)
+
   # SGR — colour / style.
   defp interpret_token({:csi, params, "", ?m}), do: [{:sgr, SGR.parse(params)}]
 
-  # Tilde-terminated editing and function keys (CSI <n> ~).
+  # Tilde-terminated editing and function keys — CSI <n> ~ or CSI <n> ; <mod> ~.
   defp interpret_token({:csi, params, "", ?~} = token) do
-    case tilde_key(params) do
-      nil -> [{:unknown, token}]
-      event -> [event]
+    case String.split(params, ";") do
+      [n] ->
+        case tilde_key(n) do
+          nil -> [{:unknown, token}]
+          event -> [event]
+        end
+
+      [n, mod] ->
+        case tilde_key(n) do
+          nil -> [{:unknown, token}]
+          base -> modified(base, mod, token)
+        end
+
+      _ ->
+        [{:unknown, token}]
     end
   end
 
@@ -123,6 +163,33 @@ defmodule Vtex.Input do
   end
 
   defp interpret_token(token), do: [{:unknown, token}]
+
+  # --- modifier decoding ---
+
+  # Wrap a base key event with its modifier list, or pass the token through if
+  # the modifier parameter is unrecognised.
+  defp modified(base, mod, token) do
+    case modifiers(mod) do
+      [] -> [{:unknown, token}]
+      mods -> [{:key, base, mods}]
+    end
+  end
+
+  # The xterm modifier parameter is `1 + bitmask` (1=Shift, 2=Alt, 4=Ctrl,
+  # 8=Meta). Returns the modifiers in a stable order, or [] if unrecognised.
+  defp modifiers(param) do
+    case Integer.parse(param) do
+      {n, ""} when n >= 1 ->
+        bits = n - 1
+
+        for {bit, name} <- [{1, :shift}, {2, :alt}, {4, :ctrl}, {8, :meta}],
+            (bits &&& bit) != 0,
+            do: name
+
+      _ ->
+        []
+    end
+  end
 
   # --- text byte interpretation ---
   #

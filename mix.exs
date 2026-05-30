@@ -9,6 +9,7 @@ defmodule Vtex.MixProject do
       app: :vtex,
       version: @version,
       elixir: "~> 1.18",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       name: "Vtex",
@@ -24,6 +25,11 @@ defmodule Vtex.MixProject do
       extra_applications: [:logger]
     ]
   end
+
+  # `dev/` holds development-only code (e.g. the `vtex.smoke` task) that is
+  # compiled in dev but never shipped — it is not in the package `files`.
+  defp elixirc_paths(:dev), do: ["lib", "dev"]
+  defp elixirc_paths(_), do: ["lib"]
 
   defp deps do
     [

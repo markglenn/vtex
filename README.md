@@ -147,6 +147,11 @@ leftover binary so the caller can buffer them until more bytes arrive.
 attributes}` and `{:unknown, token}` for anything unrecognised. Arrow and
 editing keys are recognised in both their CSI and SS3 forms.
 
+Holding `Shift`/`Ctrl`/`Alt` produces `{:key, base, mods}` — e.g. `Shift+Up` is
+`{:key, :arrow_up, [:shift]}` and `Ctrl+F5` is `{:key, {:function, 5}, [:ctrl]}`
+— where `base` is the unmodified event and `mods` is drawn from `:shift`,
+`:alt`, `:ctrl`, `:meta`.
+
 A standalone `Escape` keypress is inherently ambiguous against an `ESC`-prefixed
 sequence; see [The Escape key](#the-escape-key) above for how you resolve it.
 
@@ -161,6 +166,19 @@ sequence; see [The Escape key](#the-escape-key) above for how you resolve it.
 - No timers are needed — the cap alone is sufficient defence.
 
 Transport-layer concerns (connection limits, rate limiting) are out of scope.
+
+## Development
+
+Run the test suite with `mix test`. For a hands-on check against a real
+terminal, run the interactive smoke test and press keys to watch how Vtex
+interprets them (arrows, function keys, `Alt`+key, UTF-8, the Escape timeout):
+
+```
+mix vtex.smoke
+```
+
+It's a development-only task (under `dev/`, never shipped in the package). If
+the Erlang shell competes for stdin, run `ELIXIR_ERL_OPTIONS="-noinput" mix vtex.smoke`.
 
 ## License
 

@@ -103,6 +103,38 @@ defmodule Vtex.InputTest do
     end
   end
 
+  describe "modified keys" do
+    test "Shift+arrows (CSI 1 ; 2 <final>)" do
+      tokens = [{:csi, "1;2", "", ?A}, {:csi, "1;2", "", ?B}, {:csi, "1;2", "", ?C}]
+
+      assert Input.interpret(tokens) ==
+               [
+                 {:key, :arrow_up, [:shift]},
+                 {:key, :arrow_down, [:shift]},
+                 {:key, :arrow_right, [:shift]}
+               ]
+    end
+
+    test "Ctrl and combined modifiers on navigation keys" do
+      assert Input.interpret([{:csi, "1;5", "", ?H}]) == [{:key, :home, [:ctrl]}]
+      # modifier 7 = 1 + (Alt|Ctrl)
+      assert Input.interpret([{:csi, "1;7", "", ?F}]) == [{:key, :end, [:alt, :ctrl]}]
+      # modifier 8 = 1 + (Shift|Alt|Ctrl)
+      assert Input.interpret([{:csi, "1;8", "", ?D}]) ==
+               [{:key, :arrow_left, [:shift, :alt, :ctrl]}]
+    end
+
+    test "modified function and editing keys (CSI <n> ; <mod> ~)" do
+      assert Input.interpret([{:csi, "15;2", "", ?~}]) == [{:key, {:function, 5}, [:shift]}]
+      assert Input.interpret([{:csi, "3;5", "", ?~}]) == [{:key, :delete, [:ctrl]}]
+    end
+
+    test "a non-numeric modifier parameter passes through" do
+      token = {:csi, "1;x", "", ?A}
+      assert Input.interpret([token]) == [{:unknown, token}]
+    end
+  end
+
   describe "Alt / Meta keys" do
     test "ESC + a printable byte becomes an :alt event" do
       assert Input.interpret([{:esc, ?a}]) == [{:alt, ?a}]
