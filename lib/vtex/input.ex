@@ -17,6 +17,7 @@ defmodule Vtex.Input do
       :arrow_up | :arrow_down | :arrow_left | :arrow_right
       :insert | :delete | :home | :end | :page_up | :page_down
       {:function, 1..12}
+      {:alt, byte()}
       {:char, char()}
       {:sgr, [Vtex.SGR.attribute()]}
       {:unknown, Vtex.Tokenizer.token()}
@@ -24,6 +25,21 @@ defmodule Vtex.Input do
   Arrow and editing keys are sent differently depending on the terminal's cursor
   key mode: as CSI (`ESC [ A`) in normal mode, or as SS3 (`ESC O A`) in
   application mode. Both forms are handled.
+
+  ## Alt / Meta keys
+
+  A terminal sends an `Alt`/`Meta`-modified key as an `ESC` prefix followed by
+  the key (xterm's `metaSendsEscape`), so `Alt+a` arrives as `ESC a`. These
+  surface as `{:alt, byte}` events, where `byte` is the key that followed `ESC`.
+
+  This collides with the standalone `Escape` key, which is a bare `ESC` with
+  nothing after it. Because the parser is stateless and timeout-free it cannot
+  tell "the user pressed Escape" from "an `ESC`-prefixed sequence is still
+  arriving": a lone trailing `ESC` is held in the `Vtex.Stream` buffer until the
+  next byte decides it, and `ESC` immediately followed by a key reads as `:alt`.
+  Disambiguating a real `Escape` press requires an inactivity timeout in the
+  caller (flush as `:escape` if no byte follows within a few milliseconds);
+  Vtex deliberately leaves that policy to you.
   """
 
   alias Vtex.{SGR, Tokenizer}
@@ -44,6 +60,7 @@ defmodule Vtex.Input do
           | :page_up
           | :page_down
           | {:function, 1..12}
+          | {:alt, byte()}
           | {:char, char()}
           | {:sgr, [SGR.attribute()]}
           | {:unknown, Tokenizer.token()}
@@ -64,6 +81,9 @@ defmodule Vtex.Input do
 
       iex> Vtex.Input.interpret([{:csi, "5", "", ?~}])
       [:page_up]
+
+      iex> Vtex.Input.interpret([{:esc, ?x}])
+      [{:alt, ?x}]
   """
   @spec interpret([Tokenizer.token()]) :: [event()]
   def interpret(tokens) when is_list(tokens) do
@@ -90,6 +110,10 @@ defmodule Vtex.Input do
 
   defp interpret_token({:csi, _params, _inter, _final} = token), do: [{:unknown, token}]
 
+  # ESC + byte — an Alt/Meta-modified key (xterm "metaSendsEscape"). See the
+  # moduledoc for the standalone-Escape ambiguity this implies.
+  defp interpret_token({:esc, byte}), do: [{:alt, byte}]
+
   # SS3 — application-mode cursor keys and F1-F4.
   defp interpret_token({:ss3, byte} = token) do
     case ss3(byte) do
@@ -101,6 +125,9 @@ defmodule Vtex.Input do
   defp interpret_token(token), do: [{:unknown, token}]
 
   # --- text byte interpretation ---
+  #
+  # A leading ESC reaches this path only via `Vtex.Stream.flush/1`, which is how
+  # a standalone Escape keypress is resolved (see that module's docs).
 
   defp interpret_text(<<>>, acc), do: Enum.reverse(acc)
   defp interpret_text(<<?\r, rest::binary>>, acc), do: interpret_text(rest, [:enter | acc])

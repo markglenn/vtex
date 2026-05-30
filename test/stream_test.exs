@@ -83,4 +83,49 @@ defmodule Vtex.StreamTest do
       assert stream.buffer == ""
     end
   end
+
+  describe "pending? / flush (resolving the Escape key)" do
+    alias Vtex.Input
+
+    test "a fresh stream is not pending" do
+      refute Stream.pending?(Stream.new())
+    end
+
+    test "a lone ESC is held and marks the stream pending" do
+      {tokens, stream} = Stream.feed(Stream.new(), <<@esc>>)
+      assert tokens == []
+      assert Stream.pending?(stream)
+    end
+
+    test "flushing a lone ESC emits it as text, which Input reads as :escape" do
+      {[], stream} = Stream.feed(Stream.new(), <<@esc>>)
+      {tokens, stream} = Stream.flush(stream)
+
+      assert tokens == [{:text, <<@esc>>}]
+      refute Stream.pending?(stream)
+      assert Input.interpret(tokens) == [:escape]
+    end
+
+    test "flushing an empty buffer is a no-op" do
+      stream = Stream.new()
+      assert Stream.flush(stream) == {[], stream}
+    end
+
+    test "flushing a truncated sequence yields Escape plus the literal bytes" do
+      {[], stream} = Stream.feed(Stream.new(), <<@esc, ?[>>)
+      {tokens, stream} = Stream.flush(stream)
+
+      assert tokens == [{:text, <<@esc, ?[>>}]
+      refute Stream.pending?(stream)
+      assert Input.interpret(tokens) == [:escape, {:char, ?[}]
+    end
+
+    test "an Alt key arriving as one chunk never goes pending" do
+      # ESC and the key land together, so they resolve immediately to :alt.
+      {tokens, stream} = Stream.feed(Stream.new(), <<@esc, ?b>>)
+      assert tokens == [{:esc, ?b}]
+      refute Stream.pending?(stream)
+      assert Input.interpret(tokens) == [{:alt, ?b}]
+    end
+  end
 end

@@ -103,6 +103,19 @@ defmodule Vtex.InputTest do
     end
   end
 
+  describe "Alt / Meta keys" do
+    test "ESC + a printable byte becomes an :alt event" do
+      assert Input.interpret([{:esc, ?a}]) == [{:alt, ?a}]
+      assert Input.interpret([{:esc, ?1}]) == [{:alt, ?1}]
+    end
+
+    test "an Alt key interleaves with surrounding text" do
+      # 'a', then Alt+b, then 'c'
+      assert Input.interpret([{:text, "a"}, {:esc, ?b}, {:text, "c"}]) ==
+               [{:char, ?a}, {:alt, ?b}, {:char, ?c}]
+    end
+  end
+
   describe "unknown / pass-through" do
     test "an unrecognised CSI final byte passes through" do
       token = {:csi, "", "", ?Z}
