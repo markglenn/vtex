@@ -66,4 +66,29 @@ defmodule Vtex.SGRTest do
   test "non-numeric parameters are ignored" do
     assert SGR.parse("1;x;4") == [:bold, :underline]
   end
+
+  describe "encode/1" do
+    test "styles and basic colours" do
+      assert SGR.encode([:bold, {:fg, :red}]) == "\e[1;31m"
+      assert SGR.encode([{:bg, :blue}, :underline]) == "\e[44;4m"
+      assert SGR.encode([{:fg, {:bright, :green}}]) == "\e[92m"
+    end
+
+    test "256-colour and truecolor" do
+      assert SGR.encode([{:fg, {:index, 200}}]) == "\e[38;5;200m"
+      assert SGR.encode([{:bg, {:rgb, 10, 20, 30}}]) == "\e[48;2;10;20;30m"
+    end
+
+    test "reset and unknown round-trip" do
+      assert SGR.encode([:reset]) == "\e[0m"
+      assert SGR.encode([{:unknown, 53}]) == "\e[53m"
+    end
+
+    test "round-trips with parse for a representative set" do
+      attrs = [:bold, {:fg, :red}, {:bg, {:index, 200}}, :underline]
+      assert attrs |> SGR.encode() |> sgr_params() |> SGR.parse() == attrs
+    end
+
+    defp sgr_params("\e[" <> rest), do: String.trim_trailing(rest, "m")
+  end
 end

@@ -1,24 +1,22 @@
 defmodule Vtex do
   @moduledoc """
-  Vtex — a streaming VT/ANSI escape-sequence parser for Elixir.
+  Vtex — a streaming VT/ANSI escape-sequence library for Elixir.
 
-  Vtex turns a raw byte stream (from an SSH/Telnet/TCP transport) into typed
-  tokens and, optionally, semantic input events. It is the input-parsing
-  equivalent of the Rust [`vte`](https://crates.io/crates/vte) crate, and is
+  Vtex handles terminal I/O in both directions: it turns a raw byte stream (from
+  an SSH/Telnet/TCP transport) into typed tokens and semantic input events, and
+  it builds the control sequences you write back to draw the screen. It is
   intended for SSH/Telnet game servers, BBS engines and MUD frameworks.
 
-  The library is transport-agnostic: it knows nothing about SSH, Telnet or TCP.
-  Output encoding is deliberately out of scope — use `IO.ANSI` for that.
+  The library is transport-agnostic and does no IO of its own: input functions
+  take bytes you've read, output functions return bytes for you to write.
 
-  ## Pipeline
+  ## Input pipeline
 
       raw bytes
         -> Vtex.Stream    # stateful: buffers partial sequences, caps memory
         -> Vtex.Tokenizer # pure: bytes -> tokens
         -> Vtex.Input     # pure: tokens -> semantic events
         -> your game / app logic
-
-  ## Example
 
       stream = Vtex.Stream.new()
 
@@ -28,6 +26,23 @@ defmodule Vtex do
       Vtex.Input.interpret(tokens)
       #=> [:arrow_up, {:char, ?h}, {:char, ?i}]
 
-  See `Vtex.Tokenizer`, `Vtex.Stream`, `Vtex.Input` and `Vtex.SGR` for details.
+  ## Output
+
+  Output functions return iodata to write to the terminal:
+
+      transport_write([
+        Vtex.Screen.clear(),
+        Vtex.Cursor.to(1, 1),
+        Vtex.SGR.encode([:bold, {:fg, :red}]),
+        "Hello",
+        Vtex.SGR.encode([:reset])
+      ])
+
+  ## Modules
+
+  Input: `Vtex.Stream`, `Vtex.Tokenizer`, `Vtex.Input`.
+  Output: `Vtex.Cursor`, `Vtex.Screen`, `Vtex.SGR` (`encode/1`).
+  Both: `Vtex.SGR` (parse + encode), and the mode toggles `Vtex.Mouse`,
+  `Vtex.Paste`, `Vtex.Focus` (whose events also feed `Vtex.Input`).
   """
 end

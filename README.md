@@ -1,15 +1,15 @@
 # Vtex
 
-A streaming VT/ANSI escape-sequence parser for Elixir.
+A streaming VT/ANSI escape-sequence library for Elixir.
 
-Vtex is a tokenizer for VT/ANSI terminal escape sequences, designed for
-SSH/Telnet game servers, BBS engines and MUD frameworks. It is the
-input-parsing equivalent of the Rust [`vte`](https://crates.io/crates/vte)
-crate.
+Vtex handles terminal I/O in both directions for SSH/Telnet game servers, BBS
+engines and MUD frameworks: it parses raw input bytes into semantic events, and
+it builds the control sequences you write back to draw the screen.
 
-**Scope: input parsing only.** Output encoding is a separate concern — use
-[`IO.ANSI`](https://hexdocs.pm/elixir/IO.ANSI.html) from the standard library
-for that.
+It is **transport-agnostic and does no IO of its own** — input functions take
+bytes you've read; output functions return bytes for you to write (to an SSH
+channel, socket, or `IO`). It covers the gaps `IO.ANSI` leaves, such as
+truecolor, the alternate screen buffer, and mouse/paste/focus reporting.
 
 ## Features
 
@@ -17,6 +17,8 @@ for that.
   with a CSI parser faithful to [Paul Williams' DEC ANSI state machine](https://vt100.net/emu/dec_ansi_parser)
 - Maps tokens to semantic events — keys, function keys, `Alt`/`Meta` keys,
   modified keys, SGR mouse, SGR colour — decoding UTF-8 input to whole characters
+- Builds output sequences too — colour/style (incl. truecolor), cursor control,
+  screen clearing, the alternate buffer — covering the gaps `IO.ANSI` leaves
 - Handles streaming input correctly — partial sequences are buffered across chunks
 - Resolves the standalone-`Escape`-vs-escape-sequence ambiguity with a
   caller-driven read timeout (no timers baked into the library)
@@ -40,20 +42,20 @@ end
 ## Architecture
 
 ```
-raw bytes (from SSH / Telnet / TCP transport)
-    ↓
-Vtex.Stream      ← stateful wrapper, owns the leftover buffer + cap
-    ↓
-Vtex.Tokenizer   ← pure, stateless binary pattern matching
-    ↓
-[token stream]   ← {:text, ...}, {:csi, ...}, {:ss3, ...}, {:osc, ...}, ...
-    ↓
-Vtex.Input       ← maps tokens to semantic events
-    ↓
-[:enter, :arrow_up, {:char, ?h}, {:sgr, [{:fg, :red}]}]
-    ↓
-game / application logic
+                       INPUT                                 OUTPUT
+raw bytes (SSH / Telnet / TCP)                  game / application logic
+    ↓                                                        ↓
+Vtex.Stream    ← buffer + cap                    Vtex.Cursor / Vtex.Screen
+    ↓                                            Vtex.SGR.encode/1
+Vtex.Tokenizer ← bytes -> tokens                 Vtex.Mouse/Paste/Focus.enable
+    ↓                                                        ↓
+Vtex.Input     ← tokens -> events                control sequences (iodata)
+    ↓                                                        ↓
+game / application logic                         you write them to the transport
 ```
+
+Both directions are pure functions over bytes: nothing here touches the
+network or terminal directly.
 
 ## Usage
 
@@ -184,6 +186,29 @@ transport_write(Vtex.Mouse.enable())
 
 A standalone `Escape` keypress is inherently ambiguous against an `ESC`-prefixed
 sequence; see [The Escape key](#the-escape-key) above for how you resolve it.
+
+## Output
+
+Output functions return iodata for you to write to the terminal — the library
+never does IO itself. Compose them into a single write:
+
+```elixir
+transport_write([
+  Vtex.Screen.enter_alternate(),
+  Vtex.Screen.clear(),
+  Vtex.Cursor.to(1, 1),
+  Vtex.SGR.encode([:bold, {:fg, {:rgb, 255, 128, 0}}]),
+  "Hello, world",
+  Vtex.SGR.encode([:reset])
+])
+```
+
+| Module | What it builds |
+| --- | --- |
+| `Vtex.SGR` | `encode/1` — colour and text style, including 256-colour and truecolor |
+| `Vtex.Cursor` | absolute/relative movement, save/restore, hide/show |
+| `Vtex.Screen` | clear screen/line, alternate buffer, scroll region |
+| `Vtex.Mouse` / `Vtex.Paste` / `Vtex.Focus` | `enable/0` / `disable/0` mode toggles |
 
 ## Security
 

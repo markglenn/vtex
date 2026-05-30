@@ -1,12 +1,15 @@
 defmodule Vtex.SGR do
   @moduledoc """
-  Parser for SGR (Select Graphic Rendition) parameter strings.
+  SGR (Select Graphic Rendition) colour and text-style attributes, both ways.
 
   SGR is the `m`-terminated CSI sequence that carries colour and text-style
-  information (`ESC [ 1 ; 31 m` = bold red, for example). This module turns the
-  raw parameter binary into a list of structured attributes.
+  information (`ESC [ 1 ; 31 m` = bold red, for example). `parse/1` turns the raw
+  parameter binary into a list of structured attributes; `encode/1` turns a list
+  of attributes back into a sequence ready to write — including 256-colour and
+  truecolor, which `IO.ANSI` does not cover.
 
-  It is used internally by `Vtex.Input` but is also useful standalone.
+  `parse/1` is used internally by `Vtex.Input`; both functions are useful
+  standalone.
 
   ## Attribute types
 
@@ -75,6 +78,29 @@ defmodule Vtex.SGR do
     |> to_attributes([])
   end
 
+  @doc """
+  Encode a list of attributes into an SGR control sequence (`ESC [ … m`).
+
+  The inverse of `parse/1`: it accepts the same attribute terms — including
+  256-colour (`{:index, n}`) and truecolor (`{:rgb, r, g, b}`) selectors that
+  `IO.ANSI` does not cover. Write the result to the terminal.
+
+  ## Examples
+
+      iex> Vtex.SGR.encode([:bold, {:fg, :red}])
+      "\\e[1;31m"
+
+      iex> Vtex.SGR.encode([{:fg, {:rgb, 10, 20, 30}}, {:bg, {:index, 200}}])
+      "\\e[38;2;10;20;30;48;5;200m"
+
+      iex> Vtex.SGR.encode([:reset])
+      "\\e[0m"
+  """
+  @spec encode([attribute()]) :: binary()
+  def encode(attributes) when is_list(attributes) do
+    "\e[" <> Enum.map_join(attributes, ";", &code/1) <> "m"
+  end
+
   # An empty binary means "no parameters", which for SGR defaults to reset.
   defp split_params(""), do: [0]
 
@@ -125,12 +151,29 @@ defmodule Vtex.SGR do
   defp attribute(c) when c in 100..107, do: {:bg, {:bright, color(c - 100)}}
   defp attribute(c), do: {:unknown, c}
 
-  defp color(0), do: :black
-  defp color(1), do: :red
-  defp color(2), do: :green
-  defp color(3), do: :yellow
-  defp color(4), do: :blue
-  defp color(5), do: :magenta
-  defp color(6), do: :cyan
-  defp color(7), do: :white
+  @basic_colors [:black, :red, :green, :yellow, :blue, :magenta, :cyan, :white]
+
+  defp color(n), do: Enum.at(@basic_colors, n)
+
+  # --- encoding (attributes -> SGR sequence) ---
+
+  defp code(:reset), do: "0"
+  defp code(:bold), do: "1"
+  defp code(:faint), do: "2"
+  defp code(:italic), do: "3"
+  defp code(:underline), do: "4"
+  defp code(:blink), do: "5"
+  defp code(:inverse), do: "7"
+  defp code({:fg, c}), do: color_code(c, 30, 90, 38)
+  defp code({:bg, c}), do: color_code(c, 40, 100, 48)
+  defp code({:unknown, n}), do: Integer.to_string(n)
+
+  defp color_code({:bright, name}, _base, bright, _ext),
+    do: Integer.to_string(bright + color_index(name))
+
+  defp color_code({:index, n}, _base, _bright, ext), do: "#{ext};5;#{n}"
+  defp color_code({:rgb, r, g, b}, _base, _bright, ext), do: "#{ext};2;#{r};#{g};#{b}"
+  defp color_code(name, base, _bright, _ext), do: Integer.to_string(base + color_index(name))
+
+  defp color_index(name), do: Enum.find_index(@basic_colors, &(&1 == name))
 end

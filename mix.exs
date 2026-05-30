@@ -38,9 +38,9 @@ defmodule Vtex.MixProject do
   end
 
   defp description do
-    "A streaming VT/ANSI escape-sequence tokenizer for SSH/Telnet game servers, " <>
-      "BBS engines and MUD frameworks. Input parsing only — the Elixir equivalent " <>
-      "of the Rust `vte` crate."
+    "A streaming VT/ANSI escape-sequence library for SSH/Telnet game servers, " <>
+      "BBS engines and MUD frameworks: parse terminal input into semantic events " <>
+      "and build the control sequences to draw the screen."
   end
 
   defp package do

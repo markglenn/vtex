@@ -37,3 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `:focus_out`.
 - `Vtex.Input` also decodes Cursor Position Reports (`CSI r ; c R`) into
   `{:cursor_position, row, col}`.
+- Output support (the library now handles both directions): `Vtex.SGR.encode/1`
+  (attributes to an SGR sequence, including 256-colour and truecolor),
+  `Vtex.Cursor` (movement, position, save/restore, visibility) and `Vtex.Screen`
+  (clearing, the alternate buffer, scroll regions). All return iodata to write;
+  the library still performs no IO of its own.
