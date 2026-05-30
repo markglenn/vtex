@@ -1,0 +1,21 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- `Vtex.Tokenizer` — pure, stateless tokenizer turning a byte stream into typed
+  tokens (`:text`, `:csi`, `:ss3`, `:osc`, `:esc`, `:invalid`) plus a leftover
+  binary for incomplete sequences. DCS/APC/PM/SOS strings are rejected.
+- `Vtex.Stream` — stateful streaming wrapper that buffers partial sequences
+  across chunks and enforces a 256-byte buffer cap against memory-exhaustion
+  input.
+- `Vtex.Input` — maps tokens to semantic events (keys, function keys, SGR,
+  characters), recognising both CSI and SS3 forms of cursor/editing keys.
+- `Vtex.SGR` — parses SGR parameter strings into structured colour/style
+  attributes, including 256-colour and truecolor selectors.
