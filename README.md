@@ -1,5 +1,9 @@
 # Vtex
 
+[![CI](https://github.com/markglenn/vtex/actions/workflows/ci.yml/badge.svg)](https://github.com/markglenn/vtex/actions/workflows/ci.yml)
+[![Hex.pm](https://img.shields.io/hexpm/v/vtex.svg)](https://hex.pm/packages/vtex)
+[![Docs](https://img.shields.io/badge/hex-docs-blue.svg)](https://hexdocs.pm/vtex)
+
 A streaming VT/ANSI escape-sequence library for Elixir.
 
 Vtex handles terminal I/O in both directions for SSH/Telnet game servers, BBS
@@ -59,6 +63,9 @@ Both directions are pure functions over bytes: nothing here touches the
 network or terminal directly.
 
 ## Usage
+
+For a complete, runnable server example (accept loop, the Escape timer, mouse/
+paste/focus, rendering and teardown), see the [Integration guide](guides/integration.md).
 
 The typical flow is to keep a `Vtex.Input.Stream` in your session process state, feed
 it incoming bytes, and interpret the resulting tokens:

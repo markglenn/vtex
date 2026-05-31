@@ -8,7 +8,7 @@ defmodule Vtex.MixProject do
     [
       app: :vtex,
       version: @version,
-      elixir: "~> 1.18",
+      elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -28,9 +28,8 @@ defmodule Vtex.MixProject do
   end
 
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    # A pure library: no processes, no logging, no runtime applications.
+    [extra_applications: []]
   end
 
   # `dev/` holds development-only code (e.g. the `vtex.smoke` task) that is
@@ -61,16 +60,19 @@ defmodule Vtex.MixProject do
   defp package do
     [
       licenses: ["MIT"],
-      links: %{"GitHub" => @source_url},
+      links: %{
+        "GitHub" => @source_url,
+        "Changelog" => @source_url <> "/blob/main/CHANGELOG.md"
+      },
       files: ~w(lib mix.exs README.md CHANGELOG.md LICENSE .formatter.exs)
     ]
   end
 
   defp docs do
     [
-      main: "Vtex",
+      main: "readme",
       source_ref: "v#{@version}",
-      extras: ["README.md", "CHANGELOG.md"],
+      extras: ["README.md", "guides/integration.md", "CHANGELOG.md"],
       groups_for_modules: [
         Input: [Vtex.Input, Vtex.Input.Stream, Vtex.Input.Tokenizer],
         Output: [Vtex.Output.ANSI, Vtex.Output.Cursor, Vtex.Output.Screen, Vtex.Output.OSC],
