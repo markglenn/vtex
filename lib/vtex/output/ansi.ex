@@ -1,16 +1,16 @@
-defmodule Vtex.ANSI do
+defmodule Vtex.Output.ANSI do
   @moduledoc """
   A drop-in superset of Elixir's `IO.ANSI`.
 
   Every `IO.ANSI` function is mirrored here byte-for-byte — the test suite
   asserts parity against `IO.ANSI` itself — so you can swap `IO.ANSI` for
-  `Vtex.ANSI` and keep the same calls: `Vtex.ANSI.red()`,
-  `Vtex.ANSI.cursor(2, 3)`, `Vtex.ANSI.format([:red, "hi"])`.
+  `Vtex.Output.ANSI` and keep the same calls: `Vtex.Output.ANSI.red()`,
+  `Vtex.Output.ANSI.cursor(2, 3)`, `Vtex.Output.ANSI.format([:red, "hi"])`.
 
   On top of that it adds what `IO.ANSI` cannot express — notably **24-bit
   truecolor** via `true_color/3` and `true_color_background/3`. Richer screen and
   cursor control (alternate buffer, scroll regions, save/restore, hide/show)
-  lives in `Vtex.Screen` and `Vtex.Cursor`; mouse/paste/focus toggles in
+  lives in `Vtex.Output.Screen` and `Vtex.Output.Cursor`; mouse/paste/focus toggles in
   `Vtex.Mouse`, `Vtex.Paste`, `Vtex.Focus`.
 
   Like the rest of Vtex, every function returns iodata for you to write; nothing
@@ -147,10 +147,10 @@ defmodule Vtex.ANSI do
 
   ## Examples
 
-      iex> Vtex.ANSI.color(196)
+      iex> Vtex.Output.ANSI.color(196)
       "\\e[38;5;196m"
 
-      iex> Vtex.ANSI.color(5, 0, 0)
+      iex> Vtex.Output.ANSI.color(5, 0, 0)
       "\\e[38;5;196m"
   """
   @spec color(0..255) :: binary()
@@ -173,7 +173,7 @@ defmodule Vtex.ANSI do
 
   ## Examples
 
-      iex> Vtex.ANSI.true_color(255, 128, 0)
+      iex> Vtex.Output.ANSI.true_color(255, 128, 0)
       "\\e[38;2;255;128;0m"
   """
   @spec true_color(0..255, 0..255, 0..255) :: binary()
@@ -191,10 +191,10 @@ defmodule Vtex.ANSI do
 
   ## Examples
 
-      iex> Vtex.ANSI.format([:red, :bright, "hi"]) |> IO.iodata_to_binary()
+      iex> Vtex.Output.ANSI.format([:red, :bright, "hi"]) |> IO.iodata_to_binary()
       "\\e[31m\\e[1mhi\\e[0m"
 
-      iex> Vtex.ANSI.format([:red, "hi"], false) |> IO.iodata_to_binary()
+      iex> Vtex.Output.ANSI.format([:red, "hi"], false) |> IO.iodata_to_binary()
       "hi"
   """
   @spec format(IO.chardata(), boolean()) :: IO.chardata()

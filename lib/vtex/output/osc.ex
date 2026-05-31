@@ -1,8 +1,8 @@
-defmodule Vtex.OSC do
+defmodule Vtex.Output.OSC do
   @moduledoc """
   Operating System Command output sequences: window title and hyperlinks.
 
-  These are the OSC counterparts to the CSI output in `Vtex.Cursor` / `Vtex.Screen`,
+  These are the OSC counterparts to the CSI output in `Vtex.Output.Cursor` / `Vtex.Output.Screen`,
   and like everything else in Vtex they return iodata for you to write.
 
   OSC sequences end with a String Terminator; these use `BEL` (`0x07`), the form
@@ -16,7 +16,7 @@ defmodule Vtex.OSC do
 
   ## Examples
 
-      iex> Vtex.OSC.title("My BBS")
+      iex> Vtex.Output.OSC.title("My BBS")
       "\\e]0;My BBS\\a"
   """
   @spec title(String.t()) :: binary()
@@ -29,7 +29,7 @@ defmodule Vtex.OSC do
 
   ## Examples
 
-      iex> Vtex.OSC.hyperlink("Anthropic", "https://anthropic.com")
+      iex> Vtex.Output.OSC.hyperlink("Anthropic", "https://anthropic.com")
       "\\e]8;;https://anthropic.com\\aAnthropic\\e]8;;\\a"
   """
   @spec hyperlink(String.t(), String.t()) :: binary()

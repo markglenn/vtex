@@ -1,6 +1,6 @@
-defmodule Vtex.Stream do
+defmodule Vtex.Input.Stream do
   @moduledoc """
-  Stateful streaming wrapper around `Vtex.Tokenizer`.
+  Stateful streaming wrapper around `Vtex.Input.Tokenizer`.
 
   Owns the leftover buffer between chunks and enforces a hard buffer cap. It is
   designed to live as a plain struct inside a session process' state — it is not
@@ -8,9 +8,9 @@ defmodule Vtex.Stream do
 
   ## Usage
 
-      stream = Vtex.Stream.new()
-      {tokens, stream} = Vtex.Stream.feed(stream, first_chunk)
-      {more_tokens, stream} = Vtex.Stream.feed(stream, second_chunk)
+      stream = Vtex.Input.Stream.new()
+      {tokens, stream} = Vtex.Input.Stream.feed(stream, first_chunk)
+      {more_tokens, stream} = Vtex.Input.Stream.feed(stream, second_chunk)
 
   Sequences split across chunk boundaries are reassembled automatically: the
   tokenizer's leftover is held in the struct and prepended to the next chunk.
@@ -41,7 +41,7 @@ defmodule Vtex.Stream do
 
       # socket opened with [active: :once]
       def handle_info({:tcp, sock, data}, state) do
-        {tokens, stream} = Vtex.Stream.feed(state.stream, data)
+        {tokens, stream} = Vtex.Input.Stream.feed(state.stream, data)
         dispatch(Vtex.Input.interpret(tokens))
         :inet.setopts(sock, active: :once)
         {:noreply, state |> Map.put(:stream, stream) |> rearm_esc_timer()}
@@ -49,7 +49,7 @@ defmodule Vtex.Stream do
 
       def handle_info(:esc_timeout, state) do
         # Idle with bytes pending: that ESC was the Escape key.
-        {tokens, stream} = Vtex.Stream.flush(state.stream)
+        {tokens, stream} = Vtex.Input.Stream.flush(state.stream)
         dispatch(Vtex.Input.interpret(tokens))
         {:noreply, %{state | stream: stream, esc_timer: nil}}
       end
@@ -58,7 +58,7 @@ defmodule Vtex.Stream do
         if state.esc_timer, do: Process.cancel_timer(state.esc_timer)
 
         timer =
-          if Vtex.Stream.pending?(state.stream),
+          if Vtex.Input.Stream.pending?(state.stream),
             do: Process.send_after(self(), :esc_timeout, 50)
 
         %{state | esc_timer: timer}
@@ -90,7 +90,7 @@ defmodule Vtex.Stream do
   `{:error, :timeout}` — but it blocks the process while waiting out the window.
   """
 
-  alias Vtex.Tokenizer
+  alias Vtex.Input.Tokenizer
 
   @max_buffer 256
 
@@ -103,8 +103,8 @@ defmodule Vtex.Stream do
 
   ## Examples
 
-      iex> Vtex.Stream.new()
-      %Vtex.Stream{buffer: ""}
+      iex> Vtex.Input.Stream.new()
+      %Vtex.Input.Stream{buffer: ""}
   """
   @spec new() :: t()
   def new(), do: %__MODULE__{}
@@ -118,7 +118,7 @@ defmodule Vtex.Stream do
 
   ## Examples
 
-      iex> {tokens, _stream} = Vtex.Stream.feed(Vtex.Stream.new(), "hi")
+      iex> {tokens, _stream} = Vtex.Input.Stream.feed(Vtex.Input.Stream.new(), "hi")
       iex> tokens
       [{:text, "hi"}]
   """
@@ -143,11 +143,11 @@ defmodule Vtex.Stream do
 
   ## Examples
 
-      iex> Vtex.Stream.pending?(Vtex.Stream.new())
+      iex> Vtex.Input.Stream.pending?(Vtex.Input.Stream.new())
       false
 
-      iex> {[], stream} = Vtex.Stream.feed(Vtex.Stream.new(), <<0x1B>>)
-      iex> Vtex.Stream.pending?(stream)
+      iex> {[], stream} = Vtex.Input.Stream.feed(Vtex.Input.Stream.new(), <<0x1B>>)
+      iex> Vtex.Input.Stream.pending?(stream)
       true
   """
   @spec pending?(t()) :: boolean()
@@ -167,13 +167,13 @@ defmodule Vtex.Stream do
 
   ## Examples
 
-      iex> {[], stream} = Vtex.Stream.feed(Vtex.Stream.new(), <<0x1B>>)
-      iex> {tokens, stream} = Vtex.Stream.flush(stream)
-      iex> {tokens, Vtex.Stream.pending?(stream)}
+      iex> {[], stream} = Vtex.Input.Stream.feed(Vtex.Input.Stream.new(), <<0x1B>>)
+      iex> {tokens, stream} = Vtex.Input.Stream.flush(stream)
+      iex> {tokens, Vtex.Input.Stream.pending?(stream)}
       {[{:text, <<0x1B>>}], false}
 
-      iex> {[], stream} = Vtex.Stream.feed(Vtex.Stream.new(), <<0x1B>>)
-      iex> {tokens, _stream} = Vtex.Stream.flush(stream)
+      iex> {[], stream} = Vtex.Input.Stream.feed(Vtex.Input.Stream.new(), <<0x1B>>)
+      iex> {tokens, _stream} = Vtex.Input.Stream.flush(stream)
       iex> Vtex.Input.interpret(tokens)
       [:escape]
   """
@@ -186,7 +186,7 @@ defmodule Vtex.Stream do
 
   ## Examples
 
-      iex> Vtex.Stream.max_buffer()
+      iex> Vtex.Input.Stream.max_buffer()
       256
   """
   @spec max_buffer() :: pos_integer()

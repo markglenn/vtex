@@ -1,4 +1,4 @@
-defmodule Vtex.Cursor do
+defmodule Vtex.Output.Cursor do
   @moduledoc """
   Cursor-control output sequences.
 
@@ -6,7 +6,7 @@ defmodule Vtex.Cursor do
   terminal; the library performs no IO of its own. Positions are 1-based, matching
   the terminal's own convention.
 
-      transport_write([Vtex.Cursor.to(1, 1), Vtex.Cursor.hide()])
+      transport_write([Vtex.Output.Cursor.to(1, 1), Vtex.Output.Cursor.hide()])
   """
 
   @doc """
@@ -14,7 +14,7 @@ defmodule Vtex.Cursor do
 
   ## Examples
 
-      iex> Vtex.Cursor.to(5, 10)
+      iex> Vtex.Output.Cursor.to(5, 10)
       "\\e[5;10H"
   """
   @spec to(pos_integer(), pos_integer()) :: binary()
@@ -25,7 +25,7 @@ defmodule Vtex.Cursor do
 
   ## Examples
 
-      iex> Vtex.Cursor.column(1)
+      iex> Vtex.Output.Cursor.column(1)
       "\\e[1G"
   """
   @spec column(pos_integer()) :: binary()
@@ -36,10 +36,10 @@ defmodule Vtex.Cursor do
 
   ## Examples
 
-      iex> Vtex.Cursor.move(:up, 3)
+      iex> Vtex.Output.Cursor.move(:up, 3)
       "\\e[3A"
 
-      iex> Vtex.Cursor.move(:right)
+      iex> Vtex.Output.Cursor.move(:right)
       "\\e[1C"
   """
   @spec move(:up | :down | :left | :right, pos_integer()) :: binary()
@@ -55,7 +55,7 @@ defmodule Vtex.Cursor do
 
   ## Examples
 
-      iex> Vtex.Cursor.save()
+      iex> Vtex.Output.Cursor.save()
       "\\e7"
   """
   @spec save() :: binary()
@@ -66,7 +66,7 @@ defmodule Vtex.Cursor do
 
   ## Examples
 
-      iex> Vtex.Cursor.restore()
+      iex> Vtex.Output.Cursor.restore()
       "\\e8"
   """
   @spec restore() :: binary()
@@ -77,7 +77,7 @@ defmodule Vtex.Cursor do
 
   ## Examples
 
-      iex> Vtex.Cursor.hide()
+      iex> Vtex.Output.Cursor.hide()
       "\\e[?25l"
   """
   @spec hide() :: binary()
@@ -88,7 +88,7 @@ defmodule Vtex.Cursor do
 
   ## Examples
 
-      iex> Vtex.Cursor.show()
+      iex> Vtex.Output.Cursor.show()
       "\\e[?25h"
   """
   @spec show() :: binary()

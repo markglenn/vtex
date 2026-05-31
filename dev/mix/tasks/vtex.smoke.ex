@@ -3,10 +3,10 @@ defmodule Mix.Tasks.Vtex.Smoke do
 
   @moduledoc """
   Reads your keystrokes in raw mode and runs them through the real
-  `Vtex.Stream` -> `Vtex.Input` pipeline, printing the events Vtex produces.
+  `Vtex.Input.Stream` -> `Vtex.Input` pipeline, printing the events Vtex produces.
 
   It uses the same `pending?`/`flush` + timer pattern documented in
-  `Vtex.Stream`, so the Escape key resolves via the timeout exactly as it would
+  `Vtex.Input.Stream`, so the Escape key resolves via the timeout exactly as it would
   in a server.
 
       dev/smoke
@@ -52,7 +52,7 @@ defmodule Mix.Tasks.Vtex.Smoke do
       intro(out)
       # Query the cursor position so a {:cursor_position, …} event shows up.
       :file.write(out, "\e[6n")
-      loop(out, port, Vtex.Stream.new())
+      loop(out, port, Vtex.Input.Stream.new())
     after
       :file.write(out, [Vtex.Mouse.disable(), Vtex.Paste.disable(), Vtex.Focus.disable()])
       System.cmd("sh", ["-c", "stty #{saved} < #{dev}"])
@@ -145,7 +145,7 @@ defmodule Mix.Tasks.Vtex.Smoke do
   # --- main loop: feed -> interpret -> print, with the Escape-resolving timeout ---
 
   defp loop(out, port, stream) do
-    timeout = if Vtex.Stream.pending?(stream), do: @esc_timeout_ms, else: :infinity
+    timeout = if Vtex.Input.Stream.pending?(stream), do: @esc_timeout_ms, else: :infinity
 
     receive do
       {^port, {:data, data}} ->
@@ -153,7 +153,7 @@ defmodule Mix.Tasks.Vtex.Smoke do
           Port.close(port)
           pute(out, "[quit]")
         else
-          {tokens, stream} = Vtex.Stream.feed(stream, data)
+          {tokens, stream} = Vtex.Input.Stream.feed(stream, data)
           show(out, data, Vtex.Input.interpret(tokens))
           loop(out, port, stream)
         end
@@ -163,7 +163,7 @@ defmodule Mix.Tasks.Vtex.Smoke do
     after
       timeout ->
         # Idle with bytes pending -> that ESC was the Escape key.
-        {tokens, stream} = Vtex.Stream.flush(stream)
+        {tokens, stream} = Vtex.Input.Stream.flush(stream)
         show(out, :timeout, Vtex.Input.interpret(tokens))
         loop(out, port, stream)
     end

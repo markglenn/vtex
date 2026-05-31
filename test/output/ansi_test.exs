@@ -1,8 +1,8 @@
-defmodule Vtex.ANSITest do
+defmodule Vtex.Output.ANSITest do
   use ExUnit.Case, async: true
-  doctest Vtex.ANSI
+  doctest Vtex.Output.ANSI
 
-  alias Vtex.ANSI
+  alias Vtex.Output.ANSI
 
   describe "IO.ANSI parity" do
     test "every 0-arity IO.ANSI sequence function matches byte-for-byte" do
@@ -17,7 +17,7 @@ defmodule Vtex.ANSITest do
 
       for name <- names do
         assert apply(ANSI, name, []) == apply(IO.ANSI, name, []),
-               "Vtex.ANSI.#{name}/0 does not match IO.ANSI.#{name}/0"
+               "Vtex.Output.ANSI.#{name}/0 does not match IO.ANSI.#{name}/0"
       end
     end
 

@@ -55,7 +55,12 @@ defmodule Vtex.MixProject do
     [
       main: "Vtex",
       source_ref: "v#{@version}",
-      extras: ["README.md", "CHANGELOG.md"]
+      extras: ["README.md", "CHANGELOG.md"],
+      groups_for_modules: [
+        Input: [Vtex.Input, Vtex.Input.Stream, Vtex.Input.Tokenizer],
+        Output: [Vtex.Output.ANSI, Vtex.Output.Cursor, Vtex.Output.Screen, Vtex.Output.OSC],
+        "Both directions": [Vtex.SGR, Vtex.Mouse, Vtex.Paste, Vtex.Focus]
+      ]
     ]
   end
 end

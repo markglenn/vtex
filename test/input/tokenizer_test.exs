@@ -1,8 +1,8 @@
-defmodule Vtex.TokenizerTest do
+defmodule Vtex.Input.TokenizerTest do
   use ExUnit.Case, async: true
-  doctest Vtex.Tokenizer
+  doctest Vtex.Input.Tokenizer
 
-  alias Vtex.Tokenizer
+  alias Vtex.Input.Tokenizer
 
   @esc 0x1B
   @bel 0x07

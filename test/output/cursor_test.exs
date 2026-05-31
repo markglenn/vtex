@@ -1,8 +1,8 @@
-defmodule Vtex.CursorTest do
+defmodule Vtex.Output.CursorTest do
   use ExUnit.Case, async: true
-  doctest Vtex.Cursor
+  doctest Vtex.Output.Cursor
 
-  alias Vtex.Cursor
+  alias Vtex.Output.Cursor
 
   test "absolute position and column" do
     assert Cursor.to(5, 10) == "\e[5;10H"

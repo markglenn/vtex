@@ -1,8 +1,8 @@
-defmodule Vtex.StreamTest do
+defmodule Vtex.Input.StreamTest do
   use ExUnit.Case, async: true
-  doctest Vtex.Stream
+  doctest Vtex.Input.Stream
 
-  alias Vtex.Stream
+  alias Vtex.Input.Stream
 
   @esc 0x1B
 

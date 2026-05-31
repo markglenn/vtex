@@ -1,8 +1,8 @@
-defmodule Vtex.ScreenTest do
+defmodule Vtex.Output.ScreenTest do
   use ExUnit.Case, async: true
-  doctest Vtex.Screen
+  doctest Vtex.Output.Screen
 
-  alias Vtex.Screen
+  alias Vtex.Output.Screen
 
   test "clearing the screen and lines" do
     assert Screen.clear() == "\e[2J"

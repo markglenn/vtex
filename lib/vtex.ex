@@ -13,35 +13,35 @@ defmodule Vtex do
   ## Input pipeline
 
       raw bytes
-        -> Vtex.Stream    # stateful: buffers partial sequences, caps memory
-        -> Vtex.Tokenizer # pure: bytes -> tokens
+        -> Vtex.Input.Stream    # stateful: buffers partial sequences, caps memory
+        -> Vtex.Input.Tokenizer # pure: bytes -> tokens
         -> Vtex.Input     # pure: tokens -> semantic events
         -> your game / app logic
 
-      stream = Vtex.Stream.new()
+      stream = Vtex.Input.Stream.new()
 
-      {tokens, _stream} = Vtex.Stream.feed(stream, <<0x1B, ?[, ?A, ?h, ?i>>)
-      #=> {[{:csi, "", "", ?A}, {:text, "hi"}], %Vtex.Stream{}}
+      {tokens, _stream} = Vtex.Input.Stream.feed(stream, <<0x1B, ?[, ?A, ?h, ?i>>)
+      #=> {[{:csi, "", "", ?A}, {:text, "hi"}], %Vtex.Input.Stream{}}
 
       Vtex.Input.interpret(tokens)
       #=> [:arrow_up, {:char, ?h}, {:char, ?i}]
 
   ## Output
 
-  `Vtex.ANSI` is a drop-in superset of `IO.ANSI` (verified byte-for-byte) with
+  `Vtex.Output.ANSI` is a drop-in superset of `IO.ANSI` (verified byte-for-byte) with
   24-bit truecolor on top. Output functions return iodata to write:
 
       transport_write([
-        Vtex.Screen.clear(),
-        Vtex.ANSI.cursor(1, 1),
-        Vtex.ANSI.format([:bright, ANSI.true_color(255, 128, 0), "Hello"])
+        Vtex.Output.Screen.clear(),
+        Vtex.Output.ANSI.cursor(1, 1),
+        Vtex.Output.ANSI.format([:bright, Vtex.Output.ANSI.true_color(255, 128, 0), "Hello"])
       ])
 
   ## Modules
 
-  Input: `Vtex.Stream`, `Vtex.Tokenizer`, `Vtex.Input`.
-  Output: `Vtex.ANSI` (IO.ANSI-compatible colour/style/cursor + truecolor),
-  `Vtex.Cursor`, `Vtex.Screen`, `Vtex.OSC` (title, hyperlinks), `Vtex.SGR`
+  Input: `Vtex.Input.Stream`, `Vtex.Input.Tokenizer`, `Vtex.Input`.
+  Output: `Vtex.Output.ANSI` (IO.ANSI-compatible colour/style/cursor + truecolor),
+  `Vtex.Output.Cursor`, `Vtex.Output.Screen`, `Vtex.Output.OSC` (title, hyperlinks), `Vtex.SGR`
   (`encode/1`).
   Both: `Vtex.SGR` (parse + encode), and the mode toggles `Vtex.Mouse`,
   `Vtex.Paste`, `Vtex.Focus` (whose events also feed `Vtex.Input`).

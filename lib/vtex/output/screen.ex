@@ -1,4 +1,4 @@
-defmodule Vtex.Screen do
+defmodule Vtex.Output.Screen do
   @moduledoc """
   Screen-control output sequences: clearing, the alternate buffer, scroll regions.
 
@@ -8,9 +8,9 @@ defmodule Vtex.Screen do
   The alternate screen buffer is what full-screen apps (editors, pagers) use so
   the user's scrollback is restored on exit:
 
-      transport_write(Vtex.Screen.enter_alternate())
+      transport_write(Vtex.Output.Screen.enter_alternate())
       # ... draw the UI ...
-      transport_write(Vtex.Screen.leave_alternate())
+      transport_write(Vtex.Output.Screen.leave_alternate())
   """
 
   @doc """
@@ -18,7 +18,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.clear()
+      iex> Vtex.Output.Screen.clear()
       "\\e[2J"
   """
   @spec clear() :: binary()
@@ -29,7 +29,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.clear_below()
+      iex> Vtex.Output.Screen.clear_below()
       "\\e[0J"
   """
   @spec clear_below() :: binary()
@@ -40,7 +40,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.clear_above()
+      iex> Vtex.Output.Screen.clear_above()
       "\\e[1J"
   """
   @spec clear_above() :: binary()
@@ -51,7 +51,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.clear_line()
+      iex> Vtex.Output.Screen.clear_line()
       "\\e[2K"
   """
   @spec clear_line() :: binary()
@@ -62,7 +62,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.clear_line_end()
+      iex> Vtex.Output.Screen.clear_line_end()
       "\\e[0K"
   """
   @spec clear_line_end() :: binary()
@@ -73,7 +73,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.clear_line_start()
+      iex> Vtex.Output.Screen.clear_line_start()
       "\\e[1K"
   """
   @spec clear_line_start() :: binary()
@@ -84,7 +84,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.enter_alternate()
+      iex> Vtex.Output.Screen.enter_alternate()
       "\\e[?1049h"
   """
   @spec enter_alternate() :: binary()
@@ -95,7 +95,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.leave_alternate()
+      iex> Vtex.Output.Screen.leave_alternate()
       "\\e[?1049l"
   """
   @spec leave_alternate() :: binary()
@@ -106,7 +106,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.scroll_region(2, 23)
+      iex> Vtex.Output.Screen.scroll_region(2, 23)
       "\\e[2;23r"
   """
   @spec scroll_region(pos_integer(), pos_integer()) :: binary()
@@ -117,7 +117,7 @@ defmodule Vtex.Screen do
 
   ## Examples
 
-      iex> Vtex.Screen.reset_scroll_region()
+      iex> Vtex.Output.Screen.reset_scroll_region()
       "\\e[r"
   """
   @spec reset_scroll_region() :: binary()

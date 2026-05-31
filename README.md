@@ -17,7 +17,7 @@ truecolor, the alternate screen buffer, and mouse/paste/focus reporting.
   with a CSI parser faithful to [Paul Williams' DEC ANSI state machine](https://vt100.net/emu/dec_ansi_parser)
 - Maps tokens to semantic events — keys, function keys, `Alt`/`Meta` keys,
   modified keys, SGR mouse, SGR colour — decoding UTF-8 input to whole characters
-- Builds output sequences too — `Vtex.ANSI` is a drop-in superset of `IO.ANSI`
+- Builds output sequences too — `Vtex.Output.ANSI` is a drop-in superset of `IO.ANSI`
   (verified byte-for-byte) adding truecolor, plus cursor/screen control, the
   alternate buffer, window title and hyperlinks
 - Handles streaming input correctly — partial sequences are buffered across chunks
@@ -46,9 +46,9 @@ end
                        INPUT                                 OUTPUT
 raw bytes (SSH / Telnet / TCP)                  game / application logic
     ↓                                                        ↓
-Vtex.Stream    ← buffer + cap                    Vtex.Cursor / Vtex.Screen
+Vtex.Input.Stream    ← buffer + cap                    Vtex.Output.Cursor / Vtex.Output.Screen
     ↓                                            Vtex.SGR.encode/1
-Vtex.Tokenizer ← bytes -> tokens                 Vtex.Mouse/Paste/Focus.enable
+Vtex.Input.Tokenizer ← bytes -> tokens                 Vtex.Mouse/Paste/Focus.enable
     ↓                                                        ↓
 Vtex.Input     ← tokens -> events                control sequences (iodata)
     ↓                                                        ↓
@@ -60,15 +60,15 @@ network or terminal directly.
 
 ## Usage
 
-The typical flow is to keep a `Vtex.Stream` in your session process state, feed
+The typical flow is to keep a `Vtex.Input.Stream` in your session process state, feed
 it incoming bytes, and interpret the resulting tokens:
 
 ```elixir
-stream = Vtex.Stream.new()
+stream = Vtex.Input.Stream.new()
 
 # Bytes arrive from the transport (here: arrow-up, then "hi").
-{tokens, stream} = Vtex.Stream.feed(stream, <<0x1B, ?[, ?A, ?h, ?i>>)
-#=> {[{:csi, "", "", ?A}, {:text, "hi"}], %Vtex.Stream{}}
+{tokens, stream} = Vtex.Input.Stream.feed(stream, <<0x1B, ?[, ?A, ?h, ?i>>)
+#=> {[{:csi, "", "", ?A}, {:text, "hi"}], %Vtex.Input.Stream{}}
 
 Vtex.Input.interpret(tokens)
 #=> [:arrow_up, {:char, ?h}, {:char, ?i}]
@@ -79,15 +79,15 @@ chunks, the first feed emits nothing and the bytes are held until the next feed
 completes them:
 
 ```elixir
-{[], stream}              = Vtex.Stream.feed(stream, <<0x1B, ?[>>)
-{[{:csi, "", "", ?A}], _} = Vtex.Stream.feed(stream, <<?A>>)
+{[], stream}              = Vtex.Input.Stream.feed(stream, <<0x1B, ?[>>)
+{[{:csi, "", "", ?A}], _} = Vtex.Input.Stream.feed(stream, <<?A>>)
 ```
 
 ### The Escape key
 
 A lone `Escape` keypress (`0x1B`) is byte-for-byte the start of every
 `ESC`-prefixed sequence (arrow keys, `Alt`+key, …), so a stateless parser can't
-tell them apart without timing. `Vtex.Stream` holds a trailing lone `ESC` rather
+tell them apart without timing. `Vtex.Input.Stream` holds a trailing lone `ESC` rather
 than guess; you resolve it with `pending?/1` (arm a timer) and `flush/1` (commit
 the pending `ESC`). The idiomatic OTP shape mirrors how Neovim does it — an
 active socket delivering messages plus a one-shot `Process.send_after/3` timer:
@@ -95,7 +95,7 @@ active socket delivering messages plus a one-shot `Process.send_after/3` timer:
 ```elixir
 # socket opened with [active: :once]
 def handle_info({:tcp, sock, data}, state) do
-  {tokens, stream} = Vtex.Stream.feed(state.stream, data)
+  {tokens, stream} = Vtex.Input.Stream.feed(state.stream, data)
   dispatch(Vtex.Input.interpret(tokens))
   :inet.setopts(sock, active: :once)
   {:noreply, state |> Map.put(:stream, stream) |> rearm_esc_timer()}
@@ -103,7 +103,7 @@ end
 
 def handle_info(:esc_timeout, state) do
   # idle with bytes pending → that ESC was the Escape key
-  {tokens, stream} = Vtex.Stream.flush(state.stream)
+  {tokens, stream} = Vtex.Input.Stream.flush(state.stream)
   dispatch(Vtex.Input.interpret(tokens))
   {:noreply, %{state | stream: stream, esc_timer: nil}}
 end
@@ -111,7 +111,7 @@ end
 defp rearm_esc_timer(state) do
   if state.esc_timer, do: Process.cancel_timer(state.esc_timer)
   timer =
-    if Vtex.Stream.pending?(state.stream),
+    if Vtex.Input.Stream.pending?(state.stream),
       do: Process.send_after(self(), :esc_timeout, 50)
   %{state | esc_timer: timer}
 end
@@ -123,11 +123,11 @@ never run the timer; only a real `Escape` press does, and even then a
 continuation byte cancels it early. `50` ms matches Neovim's default
 `ttimeoutlen` (modern Vim uses `100`); drop to `10`–`30` ms on fast links for a
 snappier Escape. A simpler blocking `recv(socket, 0, timeout)` loop works too.
-See `Vtex.Stream` for the full rationale.
+See `Vtex.Input.Stream` for the full rationale.
 
 ### Tokens
 
-`Vtex.Tokenizer` produces these tokens:
+`Vtex.Input.Tokenizer` produces these tokens:
 
 | Token | Meaning |
 | --- | --- |
@@ -193,26 +193,26 @@ sequence; see [The Escape key](#the-escape-key) above for how you resolve it.
 Output functions return iodata for you to write to the terminal — the library
 never does IO itself.
 
-`Vtex.ANSI` is a **drop-in superset of `IO.ANSI`**: every `IO.ANSI` function is
+`Vtex.Output.ANSI` is a **drop-in superset of `IO.ANSI`**: every `IO.ANSI` function is
 mirrored byte-for-byte (the test suite asserts parity), so you can swap the
 module name and keep your calls — plus it adds 24-bit truecolor, which
 `IO.ANSI` can't express.
 
 ```elixir
 transport_write([
-  Vtex.Screen.enter_alternate(),
-  Vtex.ANSI.clear(),
-  Vtex.ANSI.cursor(1, 1),
-  Vtex.ANSI.format([:bright, Vtex.ANSI.true_color(255, 128, 0), "Hello, world"])
+  Vtex.Output.Screen.enter_alternate(),
+  Vtex.Output.ANSI.clear(),
+  Vtex.Output.ANSI.cursor(1, 1),
+  Vtex.Output.ANSI.format([:bright, Vtex.Output.ANSI.true_color(255, 128, 0), "Hello, world"])
 ])
 ```
 
 | Module | What it builds |
 | --- | --- |
-| `Vtex.ANSI` | drop-in `IO.ANSI` superset — colours, styles, cursor, `format/1`, **truecolor** |
-| `Vtex.Cursor` | richer cursor control — save/restore, hide/show (beyond `IO.ANSI`) |
-| `Vtex.Screen` | clear variants, alternate buffer, scroll region |
-| `Vtex.OSC` | window title, clickable hyperlinks |
+| `Vtex.Output.ANSI` | drop-in `IO.ANSI` superset — colours, styles, cursor, `format/1`, **truecolor** |
+| `Vtex.Output.Cursor` | richer cursor control — save/restore, hide/show (beyond `IO.ANSI`) |
+| `Vtex.Output.Screen` | clear variants, alternate buffer, scroll region |
+| `Vtex.Output.OSC` | window title, clickable hyperlinks |
 | `Vtex.SGR` | `parse/1` and `encode/1` — structured colour/style attributes |
 | `Vtex.Mouse` / `Vtex.Paste` / `Vtex.Focus` | `enable/0` / `disable/0` mode toggles |
 

@@ -1,10 +1,10 @@
-defmodule Vtex.Tokenizer do
+defmodule Vtex.Input.Tokenizer do
   @moduledoc """
   Pure, stateless tokenizer for VT/ANSI escape sequences.
 
   Takes a binary and returns a list of typed tokens plus a leftover binary
   containing any trailing bytes that form an incomplete sequence. The leftover
-  is meant to be prepended to the next chunk of input (see `Vtex.Stream`).
+  is meant to be prepended to the next chunk of input (see `Vtex.Input.Stream`).
 
   The tokenizer implements
   [Paul Williams' ANSI parser state machine](https://vt100.net/emu/dec_ansi_parser)
@@ -99,16 +99,16 @@ defmodule Vtex.Tokenizer do
 
   ## Examples
 
-      iex> Vtex.Tokenizer.tokenize("hi")
+      iex> Vtex.Input.Tokenizer.tokenize("hi")
       {[{:text, "hi"}], ""}
 
-      iex> Vtex.Tokenizer.tokenize(<<0x1B, ?[, ?A>>)
+      iex> Vtex.Input.Tokenizer.tokenize(<<0x1B, ?[, ?A>>)
       {[{:csi, "", "", ?A}], ""}
 
-      iex> Vtex.Tokenizer.tokenize(<<0x1B, ?[, "?25h">>)
+      iex> Vtex.Input.Tokenizer.tokenize(<<0x1B, ?[, "?25h">>)
       {[{:csi, "25", "?", ?h}], ""}
 
-      iex> Vtex.Tokenizer.tokenize(<<?a, 0x1B, ?[>>)
+      iex> Vtex.Input.Tokenizer.tokenize(<<?a, 0x1B, ?[>>)
       {[{:text, "a"}], <<0x1B, ?[>>}
   """
   @spec tokenize(binary()) :: {[token()], binary()}

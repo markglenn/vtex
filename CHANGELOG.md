@@ -9,14 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `Vtex.Tokenizer` — pure, stateless tokenizer turning a byte stream into typed
+- `Vtex.Input.Tokenizer` — pure, stateless tokenizer turning a byte stream into typed
   tokens (`:text`, `:csi`, `:ss3`, `:osc`, `:esc`, `:invalid`) plus a leftover
   binary for incomplete sequences. DCS/APC/PM/SOS strings are rejected. The CSI
   body faithfully reproduces Williams' `csi_entry`/`csi_param`/`csi_intermediate`/
   `csi_ignore` states and "anywhere" transitions: parameter and intermediate
   bytes are collected into separate buffers (`{:csi, params, intermediates,
   final}`), and malformed sequences are silently discarded.
-- `Vtex.Stream` — stateful streaming wrapper that buffers partial sequences
+- `Vtex.Input.Stream` — stateful streaming wrapper that buffers partial sequences
   across chunks and enforces a 256-byte buffer cap against memory-exhaustion
   input. `pending?/1` and `flush/1` let the caller resolve a standalone
   `Escape` keypress against an `ESC`-prefixed sequence using a read timeout.
@@ -39,10 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `{:cursor_position, row, col}`.
 - Output support (the library now handles both directions): `Vtex.SGR.encode/1`
   (attributes to an SGR sequence, including 256-colour and truecolor),
-  `Vtex.Cursor` (movement, position, save/restore, visibility) and `Vtex.Screen`
+  `Vtex.Output.Cursor` (movement, position, save/restore, visibility) and `Vtex.Output.Screen`
   (clearing, the alternate buffer, scroll regions). All return iodata to write;
   the library still performs no IO of its own.
-- `Vtex.ANSI` — a drop-in superset of `IO.ANSI`, mirroring every function
+- `Vtex.Output.ANSI` — a drop-in superset of `IO.ANSI`, mirroring every function
   byte-for-byte (asserted against `IO.ANSI` in the tests) and adding 24-bit
   truecolor (`true_color/3`, `true_color_background/3`).
-- `Vtex.OSC` — window title (`title/1`) and clickable hyperlinks (`hyperlink/2`).
+- `Vtex.Output.OSC` — window title (`title/1`) and clickable hyperlinks (`hyperlink/2`).

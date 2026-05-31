@@ -1,9 +1,9 @@
 defmodule Vtex.Input do
   @moduledoc """
-  Maps raw tokens from `Vtex.Tokenizer` to semantic input events.
+  Maps raw tokens from `Vtex.Input.Tokenizer` to semantic input events.
 
   This is a pure, stateless interpretation layer, typically called on the tokens
-  returned by `Vtex.Stream.feed/2`. It understands the common key sequences sent
+  returned by `Vtex.Input.Stream.feed/2`. It understands the common key sequences sent
   by terminals (arrow keys, editing keys, function keys) regardless of whether
   they arrive as CSI or SS3, and it expands runs of text into per-character
   events, decoding UTF-8 so multi-byte characters stay whole.
@@ -25,7 +25,7 @@ defmodule Vtex.Input do
       {:cursor_position, row :: pos_integer(), col :: pos_integer()}
       {:char, char()}
       {:sgr, [Vtex.SGR.attribute()]}
-      {:unknown, Vtex.Tokenizer.token()}
+      {:unknown, Vtex.Input.Tokenizer.token()}
 
   Arrow and editing keys are sent differently depending on the terminal's cursor
   key mode: as CSI (`ESC [ A`) in normal mode, or as SS3 (`ESC O A`) in
@@ -54,7 +54,7 @@ defmodule Vtex.Input do
   This collides with the standalone `Escape` key, which is a bare `ESC` with
   nothing after it. Because the parser is stateless and timeout-free it cannot
   tell "the user pressed Escape" from "an `ESC`-prefixed sequence is still
-  arriving": a lone trailing `ESC` is held in the `Vtex.Stream` buffer until the
+  arriving": a lone trailing `ESC` is held in the `Vtex.Input.Stream` buffer until the
   next byte decides it, and `ESC` immediately followed by a key reads as `:alt`.
   Disambiguating a real `Escape` press requires an inactivity timeout in the
   caller (flush as `:escape` if no byte follows within a few milliseconds);
@@ -87,7 +87,8 @@ defmodule Vtex.Input do
 
   import Bitwise, only: [&&&: 2]
 
-  alias Vtex.{Mouse, SGR, Tokenizer}
+  alias Vtex.{Mouse, SGR}
+  alias Vtex.Input.Tokenizer
 
   @type modifier :: :shift | :alt | :ctrl | :meta
 
@@ -268,7 +269,7 @@ defmodule Vtex.Input do
 
   # --- text byte interpretation ---
   #
-  # A leading ESC reaches this path only via `Vtex.Stream.flush/1`, which is how
+  # A leading ESC reaches this path only via `Vtex.Input.Stream.flush/1`, which is how
   # a standalone Escape keypress is resolved (see that module's docs).
 
   defp interpret_text(<<>>, acc), do: Enum.reverse(acc)

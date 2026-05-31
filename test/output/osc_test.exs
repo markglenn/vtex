@@ -1,8 +1,8 @@
-defmodule Vtex.OSCTest do
+defmodule Vtex.Output.OSCTest do
   use ExUnit.Case, async: true
-  doctest Vtex.OSC
+  doctest Vtex.Output.OSC
 
-  alias Vtex.OSC
+  alias Vtex.Output.OSC
 
   test "title wraps the text in OSC 0 ... BEL" do
     assert OSC.title("hello") == "\e]0;hello\a"
