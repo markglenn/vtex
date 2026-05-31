@@ -12,6 +12,13 @@ defmodule Vtex.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      aliases: aliases(),
+      dialyzer: [
+        plt_local_path: "priv/plts",
+        plt_core_path: "priv/plts",
+        # :mix is needed because the dev-only vtex.smoke task is a Mix.Task.
+        plt_add_apps: [:mix]
+      ],
       name: "Vtex",
       description: description(),
       package: package(),
@@ -33,8 +40,16 @@ defmodule Vtex.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:stream_data, "~> 1.0", only: :test},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false}
     ]
+  end
+
+  # `mix lint` runs the static analysers together.
+  defp aliases do
+    [lint: ["credo --strict", "dialyzer"]]
   end
 
   defp description do

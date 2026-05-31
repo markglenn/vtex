@@ -163,24 +163,19 @@ defmodule Vtex.Mouse do
 
   defp button(cb) do
     cond do
-      (cb &&& 64) != 0 ->
-        case cb &&& 3 do
-          0 -> :wheel_up
-          1 -> :wheel_down
-          2 -> :wheel_left
-          3 -> :wheel_right
-        end
-
-      (cb &&& 128) != 0 ->
-        {:button, 8 + (cb &&& 3)}
-
-      true ->
-        case cb &&& 3 do
-          0 -> :left
-          1 -> :middle
-          2 -> :right
-          3 -> :none
-        end
+      (cb &&& 64) != 0 -> wheel(cb &&& 3)
+      (cb &&& 128) != 0 -> {:button, 8 + (cb &&& 3)}
+      true -> plain_button(cb &&& 3)
     end
   end
+
+  defp wheel(0), do: :wheel_up
+  defp wheel(1), do: :wheel_down
+  defp wheel(2), do: :wheel_left
+  defp wheel(3), do: :wheel_right
+
+  defp plain_button(0), do: :left
+  defp plain_button(1), do: :middle
+  defp plain_button(2), do: :right
+  defp plain_button(3), do: :none
 end

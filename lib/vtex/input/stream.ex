@@ -107,7 +107,7 @@ defmodule Vtex.Input.Stream do
       %Vtex.Input.Stream{buffer: ""}
   """
   @spec new() :: t()
-  def new(), do: %__MODULE__{}
+  def new, do: %__MODULE__{}
 
   @doc """
   Feed a chunk of incoming bytes, returning emitted tokens and the updated stream.
@@ -190,5 +190,5 @@ defmodule Vtex.Input.Stream do
       256
   """
   @spec max_buffer() :: pos_integer()
-  def max_buffer(), do: @max_buffer
+  def max_buffer, do: @max_buffer
 end

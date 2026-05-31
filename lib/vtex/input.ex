@@ -87,8 +87,8 @@ defmodule Vtex.Input do
 
   import Bitwise, only: [&&&: 2]
 
-  alias Vtex.{Mouse, SGR}
   alias Vtex.Input.Tokenizer
+  alias Vtex.{Mouse, SGR}
 
   @type modifier :: :shift | :alt | :ctrl | :meta
 

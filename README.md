@@ -244,6 +244,10 @@ It's a development-only task (under `dev/`, never shipped in the package). The
 with the smoke reader for stdin; running `mix vtex.smoke` directly is refused
 for that reason.
 
-## License
+Static analysis runs via `mix lint`, which runs Credo (`--strict`) and Dialyzer
+together. The fuzz tests (`test/input/tokenizer_property_test.exs`) throw random
+byte soup at the parser to assert it never crashes, only emits well-formed
+tokens, loses no bytes, and keeps the stream buffer bounded. CI
+(`.github/workflows/ci.yml`) runs the test suite and `mix lint` on every push.
 
 MIT
