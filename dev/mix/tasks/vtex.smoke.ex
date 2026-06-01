@@ -45,16 +45,24 @@ defmodule Mix.Tasks.Vtex.Smoke do
     saved = capture_tty!(dev)
     {:ok, out} = :file.open(String.to_charlist(dev), [:write, :binary, :raw])
 
+    # Open the reader before the try so its OS pid is in scope for the `after`
+    # block: Port.close/1 alone does not kill `cat`, which is blocked reading the
+    # tty device and would otherwise linger as an orphan (printing
+    # "cat: stdout: Broken pipe" on the next keystroke and stealing tty bytes
+    # from the shell / the next run).
+    port = open_reader!(dev)
+    os_pid = reader_os_pid(port)
+
     try do
       set_raw!(dev)
       :file.write(out, [Vtex.Mouse.enable(), Vtex.Paste.enable(), Vtex.Focus.enable()])
-      port = open_reader!(dev)
       intro(out)
       # Query the cursor position so a {:cursor_position, …} event shows up.
       :file.write(out, "\e[6n")
       loop(out, port, Vtex.Input.Stream.new())
     after
       :file.write(out, [Vtex.Mouse.disable(), Vtex.Paste.disable(), Vtex.Focus.disable()])
+      stop_reader(port, os_pid)
       System.cmd("sh", ["-c", "stty #{saved} < #{dev}"])
       :file.close(out)
     end
@@ -142,6 +150,25 @@ defmodule Mix.Tasks.Vtex.Smoke do
     Port.open({:spawn_executable, cat}, [:binary, :stream, :exit_status, {:args, ["-u", dev]}])
   end
 
+  defp reader_os_pid(port) do
+    case Port.info(port, :os_pid) do
+      {:os_pid, pid} -> pid
+      _ -> nil
+    end
+  end
+
+  # Closing the port doesn't kill `cat` — it's blocked in read() on the tty, so
+  # it never sees the closed pipe and lingers as an orphan. Close the port (if
+  # still open), then signal the OS process directly so it goes away cleanly.
+  defp stop_reader(port, os_pid) do
+    if Port.info(port), do: Port.close(port)
+
+    if os_pid,
+      do: System.cmd("kill", ["-TERM", Integer.to_string(os_pid)], stderr_to_stdout: true)
+
+    :ok
+  end
+
   # --- main loop: feed -> interpret -> print, with the Escape-resolving timeout ---
 
   defp loop(out, port, stream) do
@@ -150,7 +177,7 @@ defmodule Mix.Tasks.Vtex.Smoke do
     receive do
       {^port, {:data, data}} ->
         if quit?(data) do
-          Port.close(port)
+          # Reader teardown happens in run/1's `after` block (stop_reader/2).
           pute(out, "[quit]")
         else
           {tokens, stream} = Vtex.Input.Stream.feed(stream, data)
