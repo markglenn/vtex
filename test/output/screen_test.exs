@@ -22,4 +22,33 @@ defmodule Vtex.Output.ScreenTest do
     assert Screen.scroll_region(2, 23) == "\e[2;23r"
     assert Screen.reset_scroll_region() == "\e[r"
   end
+
+  test "scrolling the region" do
+    assert Screen.scroll_up(3) == "\e[3S"
+    assert Screen.scroll_up() == "\e[1S"
+    assert Screen.scroll_down(2) == "\e[2T"
+    assert Screen.scroll_down() == "\e[1T"
+  end
+
+  test "line editing" do
+    assert Screen.insert_lines(1) == "\e[1L"
+    assert Screen.insert_lines() == "\e[1L"
+    assert Screen.delete_lines(2) == "\e[2M"
+  end
+
+  test "character editing" do
+    assert Screen.insert_chars(2) == "\e[2@"
+    assert Screen.delete_chars(2) == "\e[2P"
+    assert Screen.erase_chars(4) == "\e[4X"
+  end
+
+  test "synchronized updates" do
+    assert Screen.begin_sync() == "\e[?2026h"
+    assert Screen.end_sync() == "\e[?2026l"
+  end
+
+  test "soft and full reset" do
+    assert Screen.soft_reset() == "\e[!p"
+    assert Screen.full_reset() == "\ec"
+  end
 end

@@ -45,5 +45,51 @@ defmodule Vtex do
   (`encode/1`).
   Both: `Vtex.SGR` (parse + encode), and the mode toggles `Vtex.Mouse`,
   `Vtex.Paste`, `Vtex.Focus` (whose events also feed `Vtex.Input`).
+
+  ## Restoring the terminal on exit
+
+  The modes you set (colours, hidden cursor, alternate buffer, mouse tracking)
+  are *terminal* state and outlive your process, so undo them before you exit —
+  ideally from a `try/after` or signal handler so it runs even on a crash.
+  `restore/0` returns a safe, all-in-one teardown:
+
+      try do
+        transport_write(Vtex.Output.Screen.enter_alternate())
+        run_app()
+      after
+        transport_write(Vtex.restore())
+      end
   """
+
+  @doc """
+  Returns a full teardown sequence that restores the terminal to a sane state:
+  clears SGR attributes, resets the cursor shape and shows the cursor, resets the
+  scroll region, disables mouse/bracketed-paste/focus reporting, and leaves the
+  alternate buffer (last, so the user lands back on the primary screen).
+
+  Each step is the inverse of a Vtex setup function. Disabling a mode you never
+  enabled is harmless, so this is safe to emit unconditionally — for example from
+  a `try/after` or a crash handler where you don't track exactly what was on. For
+  a surgical exit, emit only the specific inverse functions instead.
+
+  ## Examples
+
+      iex> Vtex.restore() |> IO.iodata_to_binary()
+      "\\e[0m\\e[0 q\\e[?25h\\e[r\\e[?1006l\\e[?1003l\\e[?1002l\\e[?1000l\\e[?2004l\\e[?1004l\\e[?1049l"
+  """
+  @spec restore() :: iodata()
+  def restore do
+    alias Vtex.Output.{ANSI, Cursor, Screen}
+
+    [
+      ANSI.reset(),
+      Cursor.reset_shape(),
+      Cursor.show(),
+      Screen.reset_scroll_region(),
+      Vtex.Mouse.disable(),
+      Vtex.Paste.disable(),
+      Vtex.Focus.disable(),
+      Screen.leave_alternate()
+    ]
+  end
 end
