@@ -33,11 +33,11 @@ defmodule Vtex.Output.ANSI do
   # Atom → escape-sequence map, derived at compile time from IO.ANSI's own
   # 0-arity sequence functions, so the codes are never re-listed here. Boolean
   # (`enabled?`) and non-binary (`syntax_colors`) functions are filtered out.
-  @io_ansi_atoms (for {name, 0} <- IO.ANSI.__info__(:functions),
-                      seq = apply(IO.ANSI, name, []),
-                      is_binary(seq),
-                      into: %{},
-                      do: {name, seq})
+  @io_ansi_atoms for {name, 0} <- IO.ANSI.__info__(:functions),
+                     seq = apply(IO.ANSI, name, []),
+                     is_binary(seq),
+                     into: %{},
+                     do: {name, seq}
 
   # The cursor moves also have a 1-arity form, so they're delegated explicitly
   # below rather than in the 0-arity loop.

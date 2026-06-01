@@ -162,7 +162,10 @@ defmodule Mix.Tasks.Vtex.Smoke do
   # still open), then signal the OS process directly so it goes away cleanly.
   defp stop_reader(port, os_pid) do
     if Port.info(port), do: Port.close(port)
-    if os_pid, do: System.cmd("kill", ["-TERM", Integer.to_string(os_pid)], stderr_to_stdout: true)
+
+    if os_pid,
+      do: System.cmd("kill", ["-TERM", Integer.to_string(os_pid)], stderr_to_stdout: true)
+
     :ok
   end
 
